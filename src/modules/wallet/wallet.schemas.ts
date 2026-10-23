@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+/** Owner and asset are required, so a wallet cannot be opened without knowing whose balance it is. */
 export const createWalletSchema = z
   .object({
     userId: z.string().min(1).max(128),
@@ -7,12 +8,14 @@ export const createWalletSchema = z
   })
   .strict();
 
+/** Wallet ids are 24-hex ObjectIds, so a movement cannot target a malformed id. */
 export const walletIdParamsSchema = z
   .object({
     walletId: z.string().regex(/^[a-fA-F0-9]{24}$/),
   })
   .strict();
 
+/** Positive integer amount plus a referenceId, so a credit or debit can be replayed instead of applied twice. */
 export const moneyBodySchema = z
   .object({
     amount: z.string().regex(/^[1-9][0-9]{0,12}$/),
@@ -20,6 +23,7 @@ export const moneyBodySchema = z
   })
   .strict();
 
+/** Both wallets, a positive amount, and a referenceId. The service still rejects a same-wallet or cross-asset move. */
 export const transferBodySchema = z
   .object({
     fromWalletId: z.string().regex(/^[a-fA-F0-9]{24}$/),

@@ -25,12 +25,14 @@ export class IdempotencyService {
     private readonly logger: Logger,
   ) {}
 
+  /** Hashes the movement so the same referenceId with a different payload is a fingerprint mismatch. */
   fingerprint(input: FingerprintInput): string {
     const walletIds = [...input.walletIds].sort();
     const canonical = `${input.type}|${input.asset}|${input.amount}|${walletIds.join(',')}`;
     return createHash('sha256').update(canonical).digest('hex');
   }
 
+  /** Redis is the fast path. A miss falls through to Mongo, which is the guarantee a retry cannot skip. */
   async find(referenceId: string): Promise<IdempotencyRecord | null> {
     const cached = await this.readFast(referenceId);
     if (cached) return cached;
@@ -39,6 +41,7 @@ export class IdempotencyService {
     return { fingerprint: doc.fingerprint, result: doc.result };
   }
 
+  /** Stores the completed operation on the caller's session. The unique referenceId makes a second insert fail, so a retry does not move money twice. */
   async insert(input: NewOperation, session: ClientSession): Promise<void> {
     await OperationModel.create(
       [
@@ -55,6 +58,7 @@ export class IdempotencyService {
     );
   }
 
+  /** Fills the Redis fast path after commit. A cache failure is logged because Mongo already holds the guarantee. */
   async remember(referenceId: string, fingerprint: string, result: StoredResult): Promise<void> {
     try {
       await this.redis.set(
@@ -68,6 +72,7 @@ export class IdempotencyService {
     }
   }
 
+  /** Reads the Redis fast path. A missing or unreadable entry returns null so the caller uses the Mongo record. */
   private async readFast(referenceId: string): Promise<IdempotencyRecord | null> {
     try {
       const raw = await this.redis.get(cacheKey(referenceId));
@@ -89,6 +94,7 @@ export class IdempotencyService {
   }
 }
 
+/** Names the Redis entry for one referenceId, the same id the unique operation row guards. */
 function cacheKey(referenceId: string): string {
   return `idem:${referenceId}`;
 }

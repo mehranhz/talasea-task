@@ -11,6 +11,7 @@ export interface E2EContext {
   teardown: () => Promise<void>;
 }
 
+/** Starts one API on a fresh database. Teardown drops it so one suite's balances cannot leak into the next. */
 export async function createE2EContext(
   suffix: string,
   options: { redisUrl?: string } = {},

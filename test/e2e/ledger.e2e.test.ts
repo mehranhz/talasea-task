@@ -30,6 +30,7 @@ describe('ledger archive and reconciliation e2e', () => {
     await ctx.teardown();
   });
 
+  /** History after archive must stay an index scan of the hot rows. A balance that no longer matches the ledger is a mismatch. */
   it('archives old rows, updates rollups, history uses IXSCAN, reconciliation detects mismatch', async () => {
     const env = loadEnv();
     const logger = createLogger(env);

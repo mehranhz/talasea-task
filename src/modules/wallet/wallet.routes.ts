@@ -9,6 +9,7 @@ import {
   walletIdParamsSchema,
 } from './wallet.schemas';
 
+/** Wallet API. Transfer is registered before /:walletId so a transfer is not parsed as a wallet id. */
 export function buildWalletRouter(controller: WalletController, limiter: RateLimiter): Router {
   const router = Router();
   const ipLimit = limiter.limit();

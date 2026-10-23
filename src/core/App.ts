@@ -20,12 +20,14 @@ import { CONFIG, LOGGER, REDIS } from './tokens';
 export class App {
   private server: Server | null = null;
 
+  /** Private so boot always goes through create, with Mongo, Redis, and modules already up. */
   private constructor(
     readonly role: ProcessRole,
     private readonly container: Container,
     private readonly modules: Module[],
   ) {}
 
+  /** Connects Mongo and Redis, registers every module, then runs onInit. BullMQ consumers start only when the role is worker. */
   static async create(role: ProcessRole): Promise<App> {
     const env = loadEnv();
     const logger = createLogger(env);
@@ -56,6 +58,7 @@ export class App {
     return new App(role, container, modules);
   }
 
+  /** Assembles middleware and module routes in one place, so listen only has to bind the port. */
   express(): Express {
     const env = this.container.resolve(CONFIG);
     const app = express();
@@ -77,6 +80,7 @@ export class App {
     return app;
   }
 
+  /** Opens the HTTP port for the API process. The worker process does not serve traffic. */
   async listen(): Promise<Server> {
     const env = this.container.resolve(CONFIG);
     const logger = this.container.resolve(LOGGER);
@@ -90,6 +94,7 @@ export class App {
     return server;
   }
 
+  /** Drains the HTTP server during graceful shutdown, while Mongo and Redis are still connected. */
   async closeHttp(): Promise<void> {
     const server = this.server;
     if (!server) return;
@@ -99,6 +104,7 @@ export class App {
     this.server = null;
   }
 
+  /** Shuts modules down in reverse registration order, then disconnects Redis and Mongo. Queue workers stop before those connections drop. */
   async shutdown(): Promise<void> {
     const logger = this.container.resolve(LOGGER);
     for (const mod of [...this.modules].reverse()) {

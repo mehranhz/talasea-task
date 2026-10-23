@@ -34,12 +34,17 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/** A blank variable is treated as unset so the schema default applies. */
+/** Blank env values are missing, so Zod can apply the default instead of treating "" as a real setting. */
+/** Blank env values are missing, so Zod defaults apply instead of an empty string. */
 function read(name: string): string | undefined {
   const value = process.env[name];
   if (value === undefined || value.trim() === '') return undefined;
   return value;
 }
 
+/** Fails at startup when a money-path setting is missing or not a number. The process does not serve traffic with an unbounded pool or an empty asset list. */
+/** Fails at startup when a required setting is absent. Pool size, crons, and the archive window all come from here. */
 export function loadEnv(): Env {
   const parsed = envSchema.safeParse({
     PORT: read('PORT'),

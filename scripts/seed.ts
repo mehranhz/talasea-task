@@ -1,6 +1,7 @@
 const baseUrl = process.env.API_URL ?? 'http://127.0.0.1:3000';
 const count = Number(process.argv[2] ?? '10');
 
+/** Creates wallets through the API so a local run has accounts to deposit into. */
 async function main(): Promise<void> {
   if (!Number.isInteger(count) || count < 1) {
     throw new Error('Usage: tsx scripts/seed.ts [count]');
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
   process.stdout.write(`seeded ${created.length} wallets\n`);
 }
 
+/** Takes the wallet id from the create response. Seed stops if that id is missing. */
 function readId(body: unknown): string {
   if (!body || typeof body !== 'object' || !('data' in body)) {
     throw new Error('seed response missing data');

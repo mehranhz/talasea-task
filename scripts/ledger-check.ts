@@ -15,6 +15,7 @@ const ARCHIVE_AFTER_DAYS = 90;
 const OLD_ROWS = 201;
 const DAY_SECONDS = 24 * 60 * 60;
 
+/** Plants rows older than the archive window and runs archive now, so the check does not wait for cron. */
 async function main(): Promise<void> {
   const uri = checkDatabaseUri();
   process.env.MONGO_URI = uri;
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   const stamp = Date.now().toString(36);
   let failed = false;
 
+  /** Records one result. Any failed money or index rule fails the process after the database is dropped. */
   const check = (name: string, ok: boolean, detail: string): void => {
     process.stdout.write(`${ok ? 'PASS' : 'FAIL'} ${name} ${detail}\n`);
     if (!ok) failed = true;
@@ -124,6 +126,7 @@ async function main(): Promise<void> {
   if (failed) process.exit(1);
 }
 
+/** Uses a dedicated database so dropping it cannot wipe the application data. */
 function checkDatabaseUri(): string {
   const raw = process.env.ARCHIVE_CHECK_MONGO_URI ?? process.env.MONGO_URI ?? 'mongodb://127.0.0.1:27017/wallet?replicaSet=rs0';
   const normalized = raw.replace('mongodb://mongo:', 'mongodb://127.0.0.1:');
@@ -133,12 +136,14 @@ function checkDatabaseUri(): string {
   return url.toString();
 }
 
+/** ObjectIds carry their own time. Archive moves a row by that time, not by a separate date field. */
 function idAt(secondsAgo: number, counter: number): Types.ObjectId {
   const seconds = Math.floor(Date.now() / 1000) - secondsAgo;
   const hex = `${seconds.toString(16).padStart(8, '0')}aaaaaaaaaa${counter.toString(16).padStart(6, '0')}`;
   return new Types.ObjectId(hex);
 }
 
+/** Stores a known balance so reconciliation can compare the wallet to the ledger net. */
 async function insertWallet(userId: string, balance: number): Promise<Types.ObjectId> {
   const now = new Date();
   const created = await WalletModel.create({
@@ -152,6 +157,7 @@ async function insertWallet(userId: string, balance: number): Promise<Types.Obje
   return created._id;
 }
 
+/** One planted movement. Old ids are eligible for archive; a recent id must stay on the hot ledger. */
 function row(
   walletId: Types.ObjectId,
   id: Types.ObjectId,
@@ -173,11 +179,13 @@ function row(
   };
 }
 
+/** Reads the archived net. Moved credits still count, and a wash of credit and debit stays zero. */
 async function rollupNet(walletId: Types.ObjectId): Promise<number | null> {
   const doc = await LedgerRollupModel.findById(walletId).lean<{ net: number } | null>();
   return doc ? doc.net : null;
 }
 
+/** Walks every wallet page. Reconciliation must visit each wallet once and must not skip one. */
 async function pagesOf(walletRepo: WalletRepository, limit: number): Promise<string[]> {
   const ids: string[] = [];
   let after: Types.ObjectId | null = null;
@@ -192,6 +200,7 @@ async function pagesOf(walletRepo: WalletRepository, limit: number): Promise<str
   return ids;
 }
 
+/** Names the stages in the winning plan so the history check can require an index scan. */
 function winningStages(plan: unknown): string[] {
   if (!plan || typeof plan !== 'object') return [];
   const record = plan as {
@@ -204,6 +213,7 @@ function winningStages(plan: unknown): string[] {
   return found;
 }
 
+/** Walks nested plan nodes. An index scan buried under a limit still counts. */
 function stages(node: unknown, found: string[] = []): string[] {
   if (!node || typeof node !== 'object') return found;
   if ('stage' in node && typeof node.stage === 'string') found.push(node.stage);
@@ -217,6 +227,7 @@ function stages(node: unknown, found: string[] = []): string[] {
   return found;
 }
 
+/** Docs examined versus rows returned. An index scan of one recent row should not read the collection. */
 function executionStats(plan: unknown): { docs: number; returned: number } {
   if (!plan || typeof plan !== 'object' || !('executionStats' in plan)) return { docs: -1, returned: -1 };
   const stats = plan.executionStats;

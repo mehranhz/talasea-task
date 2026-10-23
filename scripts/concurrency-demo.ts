@@ -9,6 +9,7 @@ interface Envelope {
   error?: { code?: string };
 }
 
+/** Proves three money rules: concurrent withdraw, one credit for a repeated deposit, and transfers that conserve the sum. */
 async function main(): Promise<void> {
   const stamp = Date.now().toString(36);
   const walletA = await createWallet(`demo-a-${stamp}`);
@@ -45,10 +46,12 @@ async function main(): Promise<void> {
   }
 }
 
+/** Prints one case. A broken money rule fails the process after every case has run. */
 function print(name: string, ok: boolean, detail: string): void {
   process.stdout.write(`${ok ? 'PASS' : 'FAIL'} ${name} ${detail}\n`);
 }
 
+/** Withdraws one wallet many times at once. Successes cannot exceed the balance, so it cannot go negative. */
 async function caseWithdrawals(walletId: string): Promise<{ successes: number; insufficient: number; other: number }> {
   const results = await Promise.all(
     Array.from({ length: 100 }, (_, index) =>
@@ -65,6 +68,7 @@ async function caseWithdrawals(walletId: string): Promise<{ successes: number; i
   };
 }
 
+/** Transfers both directions at once. Rejected legs are fine; lost or created money is not. */
 async function caseTransfers(
   fromWalletId: string,
   toWalletId: string,
@@ -95,6 +99,7 @@ async function caseTransfers(
   };
 }
 
+/** Opens an empty wallet. The cases fund it themselves so the starting balance is known. */
 async function createWallet(userId: string): Promise<string> {
   const result = await request('/api/v1/wallets', { userId, asset: 'USD' });
   if (result.status !== 201 || !result.body.data?.id) {
@@ -103,6 +108,7 @@ async function createWallet(userId: string): Promise<string> {
   return result.body.data.id;
 }
 
+/** Posts one referenceId `times` times. A repeat must be accepted without a second credit. */
 async function deposit(walletId: string, amount: string, referenceId: string, times = 1): Promise<void> {
   const results = await Promise.all(
     Array.from({ length: times }, () =>
@@ -115,6 +121,7 @@ async function deposit(walletId: string, amount: string, referenceId: string, ti
   }
 }
 
+/** Reads the balance the overdraft and conservation checks compare. */
 async function readBalance(walletId: string): Promise<number> {
   const response = await fetch(`${baseUrl}/api/v1/wallets/${walletId}/balance`);
   const body = (await response.json()) as Envelope;
@@ -124,6 +131,7 @@ async function readBalance(walletId: string): Promise<number> {
   return Number(body.data.balance);
 }
 
+/** Sends one money request. The case counts statuses; a 422 is a rejected movement, not a crash. */
 async function request(path: string, payload: Record<string, string>): Promise<{ status: number; body: Envelope }> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: 'POST',

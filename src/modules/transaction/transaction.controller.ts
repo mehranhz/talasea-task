@@ -8,6 +8,7 @@ import type { TransactionService } from './transaction.service';
 export class TransactionController {
   constructor(private readonly transactions: TransactionService) {}
 
+  /** One page of hot-ledger history on the wallet index. This read does not change wallet.balance. */
   history = async (req: Request, res: Response): Promise<void> => {
     const { params, query } = getValidated<unknown, WalletIdParams, HistoryQuery>(res);
     const page = await this.transactions.history(toObjectId(params.walletId), query);

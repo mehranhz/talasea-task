@@ -21,6 +21,7 @@ describe('wallet core e2e', () => {
     await ctx.teardown();
   });
 
+  /** One wallet per user and asset, a non-negative debit, an atomic transfer, and a history page that does not repeat ids. */
   it('creates wallet, deposit, withdraw, transfer, history cursor, error envelope', async () => {
     const userA = `user-a-${ref('u')}`;
     const userB = `user-b-${ref('u')}`;
@@ -148,6 +149,7 @@ describe('wallet core e2e', () => {
     assert.deepEqual(Object.keys(missing.error).sort(), ['code', 'details', 'message']);
   });
 
+  /** The outbox row exists because the deposit committed. Relay publishes it and then clears it. */
   it('relays the outbox row written with a committed deposit', async () => {
     const created = await api<{ id: string }>(ctx.baseUrl, '/api/v1/wallets', {
       method: 'POST',

@@ -4,12 +4,14 @@ import { createLogger } from './config/logger';
 
 const FORCE_EXIT_MS = 10_000;
 
+/** Boots the worker process. This is the only process that starts BullMQ consumers. */
 async function main(): Promise<void> {
   const app = await App.create('worker');
   const logger = createLogger(loadEnv());
   logger.info('worker running');
 
   let shuttingDown = false;
+  /** Stops queue workers, then Redis and Mongo, so in-flight jobs can finish. A second signal is ignored, and the timer exits if shutdown stalls. */
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
     shuttingDown = true;

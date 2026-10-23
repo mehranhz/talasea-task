@@ -20,6 +20,10 @@ export interface TransactionServiceDeps {
 export class TransactionService {
   constructor(private readonly deps: TransactionServiceDeps) {}
 
+  /**
+   * Pages the hot ledger for one wallet. Requests one extra row so a cursor is
+   * returned only when another page exists. Archived rows are not in this list.
+   */
   async history(
     walletId: Types.ObjectId,
     query: { limit?: number; cursor?: string; type?: TransactionType },
@@ -29,6 +33,7 @@ export class TransactionService {
 
     const limit = clampLimit(query.limit);
     const cursorId = query.cursor ? decodeCursor(query.cursor) : undefined;
+    // One extra row tells a full page from the last page without a second query.
     const rows = await this.deps.transactionRepo.list({
       walletId,
       limit: limit + 1,

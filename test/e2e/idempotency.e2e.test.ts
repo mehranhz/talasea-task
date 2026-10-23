@@ -32,6 +32,7 @@ describe('idempotency e2e', () => {
     return w.data.id;
   }
 
+  /** The same deposit twice must move money once. The second call is a replay of the first result. */
   it('replays identical money requests and sets Idempotency-Replayed', async () => {
     const walletId = await createFundedWallet('1000');
     const referenceId = ref('replay');
@@ -50,6 +51,7 @@ describe('idempotency e2e', () => {
     assert.equal(txCount, 1);
   });
 
+  /** A reused referenceId with a different amount must be rejected, so the new amount is not applied. */
   it('returns 409 when referenceId is reused with a different fingerprint', async () => {
     const walletId = await createFundedWallet('500');
     const referenceId = ref('conflict');
@@ -69,6 +71,7 @@ describe('idempotency e2e', () => {
     assert.equal(conflict.error.code, 'IDEMPOTENCY_KEY_REUSED');
   });
 
+  /** Parallel copies of one deposit must insert one ledger row and credit the wallet once. */
   it('parallel duplicate referenceId creates one ledger row', async () => {
     const walletId = await createFundedWallet('0');
     const referenceId = ref('parallel');
@@ -91,6 +94,7 @@ describe('idempotency e2e', () => {
     assert.equal(bal.data.balance, '25');
   });
 
+  /** An empty wallet must reject the debit, and that rejection must not consume the referenceId. */
   it('insufficient funds does not consume the idempotency key', async () => {
     const userId = ref('empty');
     const w = await api<{ id: string }>(ctx.baseUrl, '/api/v1/wallets', {

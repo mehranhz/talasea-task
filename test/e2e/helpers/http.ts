@@ -16,6 +16,7 @@ export interface ApiFailure {
 
 export type ApiResponse<T = Record<string, unknown>> = ApiSuccess<T> | ApiFailure;
 
+/** Calls the API and splits success from error. Tests assert the money result on that shape. */
 export async function api<T = Record<string, unknown>>(
   baseUrl: string,
   path: string,
@@ -53,6 +54,7 @@ export async function api<T = Record<string, unknown>>(
   };
 }
 
+/** Unique referenceId so one test's deposit is not a replay of another test's. */
 export function ref(label: string): string {
   return `${label}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }

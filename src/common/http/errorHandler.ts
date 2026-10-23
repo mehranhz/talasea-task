@@ -4,16 +4,21 @@ import { ZodError } from 'zod';
 import { AppError, ErrorCode } from '../errors/AppError';
 import { IdempotencyKeyReusedError, isDuplicateKeyError, WalletExistsError } from '../errors/errors';
 
+/** Body-parser failures stay validation errors so a bad payload never reaches the money path. */
+/** Body-parser failures stay validation errors, including a body that exceeds the size limit. */
 function isHttpBodyError(err: unknown): err is { status: number; message: string } {
   if (typeof err !== 'object' || err === null) return false;
   const status = (err as { status?: unknown }).status;
   return status === 400 || status === 413;
 }
 
+/** Ties the error envelope to the request the client already has in the logs. */
+/** Every error body carries the request id so a client can match a rejection to the log line. */
 function requestIdOf(req: Request): string {
   return req.requestId || 'unknown';
 }
 
+/** One envelope for every failure: code, message, details, and requestId. */
 function sendError(
   req: Request,
   res: Response,
@@ -28,6 +33,10 @@ function sendError(
   });
 }
 
+/**
+ * Maps known failures to stable codes. A duplicate referenceId is a reused key, and a duplicate
+ * user-and-asset pair is an existing wallet. Anything else is an internal error.
+ */
 export function errorHandler(logger: Logger) {
   return (err: unknown, req: Request, res: Response, _next: NextFunction): void => {
     if (err instanceof AppError) {

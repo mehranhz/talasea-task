@@ -14,6 +14,8 @@ describe('redis down e2e', () => {
     await ctx.teardown();
   });
 
+  /** Redis is not the debit authority. A closed cache port must still commit the deposit in Mongo. */
+  /** Redis is not the debit authority. A closed cache port must still commit the deposit in Mongo. */
   it('serves balance and a deposit from Mongo when Redis is unreachable', async () => {
     const created = await api<{ id: string }>(ctx.baseUrl, '/api/v1/wallets', {
       method: 'POST',

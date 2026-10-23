@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import type { WalletDoc } from './wallet.types';
 
+/** Stored balance cannot go below zero. Version increments on each movement so a stale cache can be rejected. */
 const walletSchema = new Schema<WalletDoc>(
   {
     userId: { type: String, required: true },
@@ -13,6 +14,7 @@ const walletSchema = new Schema<WalletDoc>(
   { versionKey: false, autoIndex: false },
 );
 
+/** One wallet per user and asset. A second insert fails instead of splitting that balance. */
 walletSchema.index({ userId: 1, asset: 1 }, { unique: true });
 
 export const WalletModel = mongoose.model<WalletDoc>('Wallet', walletSchema, 'wallets');

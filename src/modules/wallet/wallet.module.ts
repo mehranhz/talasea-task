@@ -12,6 +12,7 @@ import { buildWalletRouter } from './wallet.routes';
 import { WalletService } from './wallet.service';
 
 export class WalletModule extends Module {
+  /** Wires wallets, the ledger, the outbox, idempotency, and the Redis balance cache. */
   override providers(c: Container): void {
     c.register(WalletRepository, () => new WalletRepository());
     c.register(OutboxRepository, () => new OutboxRepository());
@@ -40,6 +41,7 @@ export class WalletModule extends Module {
     c.register(WalletController, (container) => new WalletController(container.resolve(WalletService)));
   }
 
+  /** Mounts the wallet API. The shared limiter is what caps movement calls per wallet. */
   override routes(c: Container): { path: string; router: ReturnType<typeof buildWalletRouter> } {
     return {
       path: '/api/v1/wallets',

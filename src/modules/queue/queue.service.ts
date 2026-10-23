@@ -19,6 +19,7 @@ export class QueueService {
   readonly archiveQueue: Queue<LedgerArchivePayload>;
   private readonly connections: Redis[] = [];
 
+  /** Opens the four queues: outbox relay, notifications, reconciliation, and ledger archive. */
   constructor(
     private readonly redis: Redis,
     private readonly logger: Logger,
@@ -32,6 +33,7 @@ export class QueueService {
         removeOnFail: FAIL_RETENTION,
       },
     });
+    // Retries are safe: enqueue uses the outbox id as the job id, so each row is still one job.
     this.notificationQueue = new Queue<NotificationPayload>(QueueName.Notifications, {
       connection: this.duplicate(),
       defaultJobOptions: {
@@ -57,8 +59,10 @@ export class QueueService {
     });
   }
 
+  /** One Redis connection per queue or worker. BullMQ must not share a connection that is also in subscriber mode. */
   duplicate(): Redis {
     const connection = this.redis.duplicate();
+    // Log the socket error so it is not an unhandled crash. This listener does not write wallet.balance.
     connection.on('error', (err: Error) => {
       this.logger.warn({ err: err.message }, 'bullmq redis error');
     });
@@ -66,6 +70,7 @@ export class QueueService {
     return connection;
   }
 
+  /** Registers the repeating jobs. Upsert keeps one scheduler per name, so a restart does not double-run archive or reconciliation. */
   async schedule(): Promise<void> {
     await this.relayQueue.upsertJobScheduler(
       'outbox-relay',
@@ -84,44 +89,61 @@ export class QueueService {
     );
   }
 
+  /**
+   * Queues one notification keyed by the outbox id.
+   * A duplicate job id is a replay of the same event, so it is ignored instead of delivering twice.
+   */
   async enqueueNotification(data: NotificationPayload): Promise<void> {
     try {
       await this.notificationQueue.add('send', data, { jobId: data.outboxId });
     } catch (err) {
+      // The row was already queued. Skip it; do not credit or notify again.
       if (isAlreadyQueued(err)) return;
       throw err;
     }
   }
 
+  /** Starts a worker. Failures are logged; none of these jobs write wallet.balance themselves. */
   createWorker<T>(name: QueueName, concurrency: number, processor: (job: { data: T }) => Promise<void>): Worker<T> {
-    const worker = new Worker<T>(name, async (job) => processor({ data: job.data }), {
-      connection: this.duplicate(),
-      concurrency,
-    });
+    const worker = new Worker<T>(
+      name,
+      // Pass the payload through. The processor does not write wallet.balance.
+      async (job) => processor({ data: job.data }),
+      {
+        connection: this.duplicate(),
+        concurrency,
+      },
+    );
+    // Record the failure for inspection. Logging it does not repair drift or replay a debit.
     worker.on('failed', (job, err) => {
       this.logger.error({ err, queue: name, jobId: job?.id }, 'job failed');
     });
     return worker;
   }
 
+  /** Closes queues before Redis so an in-flight archive batch can finish its transaction. */
   async close(): Promise<void> {
     await this.relayQueue.close();
     await this.notificationQueue.close();
     await this.reconciliationQueue.close();
     await this.archiveQueue.close();
     await Promise.all(
-      this.connections.map(async (connection) => {
-        try {
-          await connection.quit();
-        } catch {
-          connection.disconnect();
-        }
-      }),
+      this.connections.map(
+        // Quit so an in-flight command can finish. Disconnect if the server does not answer.
+        async (connection) => {
+          try {
+            await connection.quit();
+          } catch {
+            connection.disconnect();
+          }
+        },
+      ),
     );
     this.redis.disconnect();
   }
 }
 
+/** True when BullMQ rejected a second job with the same outbox id. */
 function isAlreadyQueued(err: unknown): boolean {
   return err instanceof Error && (err.message.includes('already exists') || err.message.includes('Job is already'));
 }

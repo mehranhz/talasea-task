@@ -26,6 +26,7 @@ describe('concurrency e2e', () => {
     return w.data.id;
   }
 
+  /** Concurrent debits must not exceed the funded balance. The stored balance stays non-negative. */
   it('100-way withdrawals cannot overdraw one wallet', async () => {
     const walletId = await newWallet(ref('overdraft'));
     const fundRef = ref('fund');
@@ -63,6 +64,7 @@ describe('concurrency e2e', () => {
     assert.ok(doc.balance >= 0);
   });
 
+  /** Transfers in both directions must conserve the deposited sum. */
   it('opposing transfers conserve total balance', async () => {
     const walletA = await newWallet(ref('opp-a'));
     const walletB = await newWallet(ref('opp-b'));
@@ -111,6 +113,7 @@ describe('concurrency e2e', () => {
     assert.equal(sum, 2000);
   });
 
+  /** A later write has a higher version, so the cached balance cannot stay on the previous figure. */
   it('balance cache tracks wallet version after writes', async () => {
     const walletId = await newWallet(ref('cache'));
     const before = await api<{ version: number; balance: string }>(
@@ -141,6 +144,7 @@ describe('concurrency e2e', () => {
     assert.equal(after.data.version, 2);
   });
 
+  /** Concurrent deposits, withdrawals, and transfers must not change the total of the funded balances. */
   it('concurrent writes and balance reads avoid HTTP 500 and conserve balances', async () => {
     const wallets = await Promise.all(Array.from({ length: 8 }, (_, i) => newWallet(ref(`mix-${i}`))));
     for (const id of wallets) {

@@ -6,12 +6,18 @@ import type { NotificationPayload } from '../queue.types';
 const BATCH_SIZE = 200;
 
 export class OutboxRelayProcessor {
+  /** Keeps the outbox and the notification queue. Relay publishes only after the money transaction committed. */
   constructor(
     private readonly outboxRepo: OutboxRepository,
     private readonly queues: QueueService,
     private readonly logger: Logger,
   ) {}
 
+  /**
+   * Enqueues unpublished outbox rows, then marks them published.
+   * The balance already committed with the outbox insert. A crash before the mark retries the row;
+   * the notification job id is the outbox id, so that retry does not deliver twice.
+   */
   async relay(): Promise<number> {
     const rows = await this.outboxRepo.findUnpublished(BATCH_SIZE);
     const published = [];

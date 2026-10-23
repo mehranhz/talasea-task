@@ -4,6 +4,7 @@ import type { BalanceSnapshot } from './wallet.types';
 
 const NEGATIVE_TTL_SECONDS = 10;
 
+/** Keeps the higher version. An older snapshot must not replace a balance written later. */
 const SET_IF_NEWER = `
 local raw = redis.call('GET', KEYS[1])
 if raw then
@@ -31,6 +32,7 @@ export class BalanceCache {
     private readonly ttlSeconds: number,
   ) {}
 
+  /** Cached balance, or Mongo on a miss. Redis is a fast path; it is not the balance of record. */
   async get(
     walletId: string,
     loader: () => Promise<BalanceSnapshot | null>,
@@ -51,6 +53,7 @@ export class BalanceCache {
     }
   }
 
+  /** Stores this snapshot only when its version wins. A cache error is logged and does not undo the commit. */
   async setIfNewer(walletId: string, snapshot: BalanceSnapshot): Promise<void> {
     try {
       const ttl = jitter(this.ttlSeconds);
@@ -65,6 +68,7 @@ export class BalanceCache {
     }
   }
 
+  /** Loads Mongo after a miss. A wallet that does not exist is remembered briefly, then returned as missing. */
   private async load(
     walletId: string,
     loader: () => Promise<BalanceSnapshot | null>,
@@ -78,6 +82,7 @@ export class BalanceCache {
     return snapshot;
   }
 
+  /** Reads one cached snapshot. A bad payload or a Redis error is a miss, so the caller loads Mongo. */
   private async read(walletId: string): Promise<BalanceSnapshot | 'missing' | null> {
     try {
       const raw = await this.redis.get(key(walletId));
@@ -96,6 +101,7 @@ export class BalanceCache {
     }
   }
 
+  /** Caches a missing wallet for a few seconds so a bad id is not looked up on every read. */
   private async rememberMissing(walletId: string): Promise<void> {
     try {
       await this.redis.set(key(walletId), JSON.stringify({ missing: true }), 'EX', NEGATIVE_TTL_SECONDS);
@@ -105,10 +111,12 @@ export class BalanceCache {
   }
 }
 
+/** One key per wallet so one cached balance cannot be served as another. */
 function key(walletId: string): string {
   return `wb:${walletId}`;
 }
 
+/** Spreads expiry so many wallets do not fall through to Mongo at the same moment. */
 function jitter(baseSeconds: number): number {
   const delta = baseSeconds * 0.2;
   const ttl = baseSeconds + (Math.random() * 2 - 1) * delta;
