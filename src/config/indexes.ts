@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { OperationModel } from '../modules/idempotency/operation.model';
 import { OutboxModel } from '../modules/outbox/outbox.model';
-import { TransactionModel } from '../modules/transaction/transaction.model';
+import { LedgerRollupModel, TransactionArchiveModel, TransactionModel } from '../modules/transaction/transaction.model';
 import { WalletModel } from '../modules/wallet/wallet.model';
 
 const balanceValidator = {
@@ -16,6 +16,8 @@ const balanceValidator = {
 export async function ensureIndexes(): Promise<void> {
   await WalletModel.createIndexes();
   await TransactionModel.createIndexes();
+  await TransactionArchiveModel.createIndexes();
+  await LedgerRollupModel.createIndexes();
   await OperationModel.createIndexes();
   await OutboxModel.createIndexes();
 

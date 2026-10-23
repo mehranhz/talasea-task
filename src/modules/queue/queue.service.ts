@@ -2,7 +2,12 @@ import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { QueueName } from './queue.names';
-import type { NotificationPayload, OutboxRelayPayload, ReconciliationPayload } from './queue.types';
+import type {
+  LedgerArchivePayload,
+  NotificationPayload,
+  OutboxRelayPayload,
+  ReconciliationPayload,
+} from './queue.types';
 
 const COMPLETE_RETENTION = { age: 60 * 60, count: 1_000 };
 const FAIL_RETENTION = { age: 7 * 24 * 60 * 60, count: 5_000 };
@@ -11,12 +16,14 @@ export class QueueService {
   readonly relayQueue: Queue<OutboxRelayPayload>;
   readonly notificationQueue: Queue<NotificationPayload>;
   readonly reconciliationQueue: Queue<ReconciliationPayload>;
+  readonly archiveQueue: Queue<LedgerArchivePayload>;
   private readonly connections: Redis[] = [];
 
   constructor(
     private readonly redis: Redis,
     private readonly logger: Logger,
     private readonly reconciliationCron: string,
+    private readonly archiveCron: string,
   ) {
     this.relayQueue = new Queue<OutboxRelayPayload>(QueueName.OutboxRelay, {
       connection: this.duplicate(),
@@ -35,6 +42,13 @@ export class QueueService {
       },
     });
     this.reconciliationQueue = new Queue<ReconciliationPayload>(QueueName.Reconciliation, {
+      connection: this.duplicate(),
+      defaultJobOptions: {
+        removeOnComplete: COMPLETE_RETENTION,
+        removeOnFail: FAIL_RETENTION,
+      },
+    });
+    this.archiveQueue = new Queue<LedgerArchivePayload>(QueueName.LedgerArchive, {
       connection: this.duplicate(),
       defaultJobOptions: {
         removeOnComplete: COMPLETE_RETENTION,
@@ -63,6 +77,11 @@ export class QueueService {
       { pattern: this.reconciliationCron },
       { name: 'reconcile', data: { kind: 'reconcile' } },
     );
+    await this.archiveQueue.upsertJobScheduler(
+      'ledger-archive',
+      { pattern: this.archiveCron },
+      { name: 'archive', data: { kind: 'archive' } },
+    );
   }
 
   async enqueueNotification(data: NotificationPayload): Promise<void> {
@@ -89,6 +108,7 @@ export class QueueService {
     await this.relayQueue.close();
     await this.notificationQueue.close();
     await this.reconciliationQueue.close();
+    await this.archiveQueue.close();
     await Promise.all(
       this.connections.map(async (connection) => {
         try {

@@ -13,6 +13,8 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10_000),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
   RECONCILIATION_CRON: z.string().min(1).default('0 * * * *'),
+  LEDGER_ARCHIVE_CRON: z.string().min(1).default('15 3 * * *'),
+  LEDGER_ARCHIVE_AFTER_DAYS: z.coerce.number().int().positive().default(90),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SUPPORTED_ASSETS: z
     .string()
@@ -52,6 +54,8 @@ export function loadEnv(): Env {
     RATE_LIMIT_MAX: read('RATE_LIMIT_MAX'),
     WORKER_CONCURRENCY: read('WORKER_CONCURRENCY'),
     RECONCILIATION_CRON: read('RECONCILIATION_CRON'),
+    LEDGER_ARCHIVE_CRON: read('LEDGER_ARCHIVE_CRON'),
+    LEDGER_ARCHIVE_AFTER_DAYS: read('LEDGER_ARCHIVE_AFTER_DAYS'),
     LOG_LEVEL: read('LOG_LEVEL'),
     SUPPORTED_ASSETS: read('SUPPORTED_ASSETS'),
     TRUST_PROXY: read('TRUST_PROXY'),

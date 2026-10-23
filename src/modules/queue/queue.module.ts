@@ -8,12 +8,13 @@ import { createBullRedis } from '../../config/redis';
 import { OutboxRepository } from '../outbox/outbox.repository';
 import { TransactionRepository } from '../transaction/transaction.repository';
 import { WalletRepository } from '../wallet/wallet.repository';
+import { LedgerArchiveProcessor } from './processors/ledger-archive.processor';
 import { NotificationProcessor } from './processors/notification.processor';
 import { OutboxRelayProcessor } from './processors/outbox-relay.processor';
 import { ReconciliationProcessor } from './processors/reconciliation.processor';
 import { QueueName } from './queue.names';
 import { QueueService } from './queue.service';
-import type { NotificationPayload, OutboxRelayPayload, ReconciliationPayload } from './queue.types';
+import type { LedgerArchivePayload, NotificationPayload, OutboxRelayPayload, ReconciliationPayload } from './queue.types';
 
 export class QueueModule extends Module {
   private workers: Worker[] = [];
@@ -29,10 +30,12 @@ export class QueueModule extends Module {
       if (!this.bullRedis) {
         this.bullRedis = createBullRedis(container.resolve(CONFIG), container.resolve(LOGGER));
       }
+      const config = container.resolve(CONFIG);
       const service = new QueueService(
         this.bullRedis,
         container.resolve(LOGGER),
-        container.resolve(CONFIG).RECONCILIATION_CRON,
+        config.RECONCILIATION_CRON,
+        config.LEDGER_ARCHIVE_CRON,
       );
       this.queueService = service;
       return service;
@@ -56,6 +59,15 @@ export class QueueModule extends Module {
           container.resolve(LOGGER),
         ),
     );
+    c.register(
+      LedgerArchiveProcessor,
+      (container) =>
+        new LedgerArchiveProcessor(
+          container.resolve(TransactionRepository),
+          container.resolve(LOGGER),
+          container.resolve(CONFIG).LEDGER_ARCHIVE_AFTER_DAYS,
+        ),
+    );
   }
 
   override async onInit(c: Container): Promise<void> {
@@ -67,6 +79,7 @@ export class QueueModule extends Module {
     const relay = c.resolve(OutboxRelayProcessor);
     const notifications = c.resolve(NotificationProcessor);
     const reconciliation = c.resolve(ReconciliationProcessor);
+    const archive = c.resolve(LedgerArchiveProcessor);
 
     this.workers = [
       queues.createWorker<OutboxRelayPayload>(QueueName.OutboxRelay, 1, async () => {
@@ -77,6 +90,9 @@ export class QueueModule extends Module {
       }),
       queues.createWorker<ReconciliationPayload>(QueueName.Reconciliation, 1, async () => {
         await reconciliation.reconcile();
+      }),
+      queues.createWorker<LedgerArchivePayload>(QueueName.LedgerArchive, 1, async () => {
+        await archive.archive();
       }),
     ];
     logger.info({ concurrency }, 'workers started');

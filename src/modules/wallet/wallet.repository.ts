@@ -33,11 +33,10 @@ export class WalletRepository {
     return WalletModel.find({ _id: { $in: ids } }).lean<WalletDoc[]>().exec();
   }
 
-  async findBalance(id: Types.ObjectId): Promise<BalanceSnapshot | null> {
-    const doc = await WalletModel.findById(id)
-      .select({ asset: 1, balance: 1, version: 1 })
-      .lean<BalanceSnapshot>()
-      .exec();
+  async findBalance(id: Types.ObjectId, session?: ClientSession): Promise<BalanceSnapshot | null> {
+    const query = WalletModel.findById(id).select({ asset: 1, balance: 1, version: 1 }).lean<BalanceSnapshot>();
+    if (session) query.session(session);
+    const doc = await query.exec();
     if (!doc) return null;
     return { asset: doc.asset, balance: doc.balance, version: doc.version };
   }
@@ -73,7 +72,13 @@ export class WalletRepository {
     return found !== null;
   }
 
-  scan(batchSize: number): AsyncIterable<WalletDoc> {
-    return WalletModel.find().sort({ _id: 1 }).lean<WalletDoc>().cursor({ batchSize });
+  async listBatch(after: Types.ObjectId | null, limit: number): Promise<WalletDoc[]> {
+    const filter = after ? { _id: { $gt: after } } : {};
+    return WalletModel.find(filter)
+      .sort({ _id: 1 })
+      .select({ balance: 1 })
+      .limit(limit)
+      .lean<WalletDoc[]>()
+      .exec();
   }
 }

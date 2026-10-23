@@ -26,3 +26,29 @@ export const TransactionModel = mongoose.model<TransactionDoc>(
   transactionSchema,
   'transactions',
 );
+
+const archiveSchema = transactionSchema.clone();
+
+export const TransactionArchiveModel = mongoose.model<TransactionDoc>(
+  'TransactionArchive',
+  archiveSchema,
+  'transactions_archive',
+);
+
+const rollupSchema = new Schema(
+  {
+    net: { type: Number, required: true, default: 0 },
+  },
+  { versionKey: false, autoIndex: false },
+);
+
+export interface LedgerRollupDoc {
+  _id: mongoose.Types.ObjectId;
+  net: number;
+}
+
+export const LedgerRollupModel = mongoose.model<LedgerRollupDoc>(
+  'LedgerRollup',
+  rollupSchema,
+  'ledger_rollups',
+);
