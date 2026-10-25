@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "طلاسی",
+    "description": "واریز، برداشت و انتقال.",
+    "applicationName": "طلاسی"
+  },
+  "manifest": {
+    "name": "طلاسی",
+    "shortName": "طلاسی",
+    "description": "واریز، برداشت و انتقال."
+  },
+  "shell": {
+    "brand": "طلاسی",
+    "navLabel": "اصلی",
+    "localeLabel": "زبان"
+  },
+  "nav": {
+    "wallets": "کیف‌ها",
+    "transfer": "انتقال"
+  },
+  "locales": {
+    "fa": "فارسی",
+    "en": "English"
+  },
+  "common": {
+    "loading": "در حال بارگذاری…",
+    "loadingValue": "…",
+    "notFound": "این صفحه پیدا نشد."
+  },
+  "actions": {
+    "pending": "در حال انجام…",
+    "createWallet": "ساخت کیف",
+    "openWallet": "باز کردن کیف",
+    "deposit": "واریز",
+    "withdraw": "برداشت",
+    "transfer": "انتقال",
+    "newReference": "شناسه تازه",
+    "loadMore": "نمایش بیشتر"
+  },
+  "wallets": {
+    "title": "کیف‌ها",
+    "checking": "در حال بررسی API…",
+    "online": "API در دسترس است.",
+    "offline": "API در دسترس نیست.",
+    "savedLabel": "کیف‌های ذخیره‌شده",
+    "empty": "هنوز کیفی روی این دستگاه نیست. یکی بسازید، یا شناسه‌ای که دارید را باز کنید.",
+    "openedById": "باز شده با شناسه",
+    "unavailable": "ناموجود",
+    "createTitle": "ساخت کیف",
+    "userId": "شناسه کاربر",
+    "userIdHint": "برای هر کاربر و دارایی یک کیف.",
+    "asset": "دارایی",
+    "openTitle": "باز کردن با شناسه",
+    "walletId": "شناسه کیف"
+  },
+  "wallet": {
+    "fallbackOwner": "کیف",
+    "invalidId": "شناسه کیف باید ۲۴ نویسه هگز باشد.",
+    "movement": "حرکت",
+    "amount": "مبلغ",
+    "amountPlaceholder": "10.50",
+    "reference": "شناسه مرجع",
+    "referenceHint": "همین شناسه را دوباره بفرستید تا همان حرکت تکرار شود.",
+    "history": "تاریخچه",
+    "filter": "فیلتر",
+    "emptyHistory": "در این صفحه ردیفی نیست.",
+    "balanceAfter": "مانده {amount}",
+    "replayed": "این شناسه قبلاً استفاده شده است. نتیجه اصلی دوباره نشان داده می‌شود.",
+    "modes": {
+      "deposit": "واریز",
+      "withdraw": "برداشت"
+    }
+  },
+  "transfer": {
+    "title": "انتقال",
+    "intro": "برای هر شناسه مرجع فقط یک بار پول جابه‌جا می‌شود. هر دو کیف با هم به‌روز می‌شوند.",
+    "savedSender": "فرستنده ذخیره‌شده",
+    "typeId": "شناسه را پایین بنویسید",
+    "from": "از کیف",
+    "to": "به کیف",
+    "amount": "مبلغ",
+    "amountPlaceholder": "10.50",
+    "reference": "شناسه مرجع",
+    "result": "نتیجه",
+    "senderBalance": "فرستنده {amount}",
+    "receiverBalance": "گیرنده {amount}",
+    "replayed": "این شناسه قبلاً استفاده شده است. نتیجه اصلی دوباره نشان داده می‌شود."
+  },
+  "ledger": {
+    "all": "همه",
+    "DEPOSIT": "واریز",
+    "WITHDRAWAL": "برداشت",
+    "TRANSFER_IN": "انتقال ورودی",
+    "TRANSFER_OUT": "انتقال خروجی",
+    "deposits": "واریزها",
+    "withdrawals": "برداشت‌ها",
+    "transfersIn": "انتقال‌های ورودی",
+    "transfersOut": "انتقال‌های خروجی"
+  },
+  "hints": {
+    "empty": "به API به‌صورت واحد جزئی فرستاده می‌شود.",
+    "decimals": "دلار و یورو دو رقم اعشار دارند.",
+    "minor": "{value} واحد جزئی"
+  },
+  "errors": {
+    "network": "API کیف در دسترس نیست.",
+    "requestFailed": "درخواست ناموفق بود.",
+    "unknown": "مشکلی پیش آمد.",
+    "requestId": "درخواست {id}.",
+    "walletId": "شناسه کیف ۲۴ نویسه هگز است.",
+    "walletIdPair": "هر دو شناسه کیف باید ۲۴ نویسه هگز باشند.",
+    "notFound": "این صفحه پیدا نشد.",
+    "amount": {
+      "invalid": "مبلغی مثل ۱۰٫۵۰ وارد کنید.",
+      "decimals": "دلار و یورو دو رقم اعشار دارند.",
+      "positive": "مبلغ باید بزرگ‌تر از صفر باشد."
+    }
+  }
+}

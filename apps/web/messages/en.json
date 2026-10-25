@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "title": "Talasea",
+    "description": "Deposits, withdrawals, and transfers.",
+    "applicationName": "Talasea"
+  },
+  "manifest": {
+    "name": "Talasea",
+    "shortName": "Talasea",
+    "description": "Deposits, withdrawals, and transfers."
+  },
+  "shell": {
+    "brand": "Talasea",
+    "navLabel": "Primary",
+    "localeLabel": "Language"
+  },
+  "nav": {
+    "wallets": "Wallets",
+    "transfer": "Transfer"
+  },
+  "locales": {
+    "fa": "فارسی",
+    "en": "English"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadingValue": "…",
+    "notFound": "This page could not be found."
+  },
+  "actions": {
+    "pending": "Working…",
+    "createWallet": "Create wallet",
+    "openWallet": "Open wallet",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "transfer": "Transfer",
+    "newReference": "New reference",
+    "loadMore": "Load more"
+  },
+  "wallets": {
+    "title": "Wallets",
+    "checking": "Checking the API…",
+    "online": "API is reachable.",
+    "offline": "API is unreachable.",
+    "savedLabel": "Saved wallets",
+    "empty": "No wallets on this device yet. Create one, or open an id you already have.",
+    "openedById": "Opened by id",
+    "unavailable": "Unavailable",
+    "createTitle": "Create a wallet",
+    "userId": "User id",
+    "userIdHint": "One wallet for each user and asset.",
+    "asset": "Asset",
+    "openTitle": "Open by id",
+    "walletId": "Wallet id"
+  },
+  "wallet": {
+    "fallbackOwner": "Wallet",
+    "invalidId": "This wallet id is not a 24-character hex id.",
+    "movement": "Movement",
+    "amount": "Amount",
+    "amountPlaceholder": "10.50",
+    "reference": "Reference id",
+    "referenceHint": "Reuse this id to replay the same movement.",
+    "history": "History",
+    "filter": "Filter",
+    "emptyHistory": "No ledger rows on this page.",
+    "balanceAfter": "Balance {amount}",
+    "replayed": "This reference was already used. The original result is shown again.",
+    "modes": {
+      "deposit": "Deposit",
+      "withdraw": "Withdraw"
+    }
+  },
+  "transfer": {
+    "title": "Transfer",
+    "intro": "Moves money once for a reference id. Both wallets update together.",
+    "savedSender": "Choose a saved sender",
+    "typeId": "Type an id below",
+    "from": "From wallet",
+    "to": "To wallet",
+    "amount": "Amount",
+    "amountPlaceholder": "10.50",
+    "reference": "Reference id",
+    "result": "Result",
+    "senderBalance": "Sender {amount}",
+    "receiverBalance": "Receiver {amount}",
+    "replayed": "This reference was already used. The original result is shown again."
+  },
+  "ledger": {
+    "all": "All",
+    "DEPOSIT": "Deposit",
+    "WITHDRAWAL": "Withdrawal",
+    "TRANSFER_IN": "Transfer in",
+    "TRANSFER_OUT": "Transfer out",
+    "deposits": "Deposits",
+    "withdrawals": "Withdrawals",
+    "transfersIn": "Transfers in",
+    "transfersOut": "Transfers out"
+  },
+  "hints": {
+    "empty": "Sent to the API as minor units.",
+    "decimals": "USD and EUR use two decimal places.",
+    "minor": "{value} minor units"
+  },
+  "errors": {
+    "network": "The wallet API is unreachable.",
+    "requestFailed": "Request failed.",
+    "unknown": "Something went wrong.",
+    "requestId": "Request {id}.",
+    "walletId": "A wallet id is 24 hex characters.",
+    "walletIdPair": "Both wallet ids must be 24 hex characters.",
+    "notFound": "This page could not be found.",
+    "amount": {
+      "invalid": "Enter an amount like 10.50.",
+      "decimals": "USD and EUR use two decimal places.",
+      "positive": "Amount must be greater than zero."
+    }
+  }
+}
