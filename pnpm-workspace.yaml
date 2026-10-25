@@ -1,0 +1,4 @@
+# task-mehran-hosseinzadeh/ is an untracked copy at the repo root.
+# It is not a workspace package. Only apps/* is included.
+packages:
+  - "apps/*"
