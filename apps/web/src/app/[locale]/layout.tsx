@@ -4,6 +4,7 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { Vazirmatn } from "next/font/google";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { QueryProvider } from "@/components/query-provider";
 import { AppShell } from "@/components/shell/app-shell";
 import { ServiceWorkerRegister } from "@/components/shell/service-worker-register";
 import { routing, directionFor } from "@/i18n/routing";
@@ -14,6 +15,13 @@ const sans = Vazirmatn({
   display: "swap",
   variable: "--font-vazirmatn",
 });
+
+const timeZone = "Asia/Tehran";
+
+async function requestNow() {
+  "use cache";
+  return new Date();
+}
 
 export const viewport: Viewport = {
   themeColor: "#241c14",
@@ -32,6 +40,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) notFound();
   const t = await getTranslations({ locale, namespace: "meta" });
 
   return {
@@ -64,14 +73,17 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
+  const messages = await getMessages({ locale });
+  const now = await requestNow();
 
   return (
     <html lang={locale} dir={directionFor(locale)} className={sans.variable}>
       <body className="min-h-dvh font-sans antialiased">
-        <NextIntlClientProvider messages={messages}>
-          <ServiceWorkerRegister />
-          <AppShell>{children}</AppShell>
+        <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone} now={now} formats={{}}>
+          <QueryProvider>
+            <ServiceWorkerRegister />
+            <AppShell locale={locale}>{children}</AppShell>
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

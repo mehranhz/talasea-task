@@ -35,7 +35,8 @@
     "withdraw": "برداشت",
     "transfer": "انتقال",
     "newReference": "شناسه تازه",
-    "loadMore": "نمایش بیشتر"
+    "loadMore": "نمایش بیشتر",
+    "retry": "تلاش دوباره"
   },
   "wallets": {
     "title": "کیف‌ها",
@@ -106,6 +107,7 @@
     "network": "API کیف در دسترس نیست.",
     "requestFailed": "درخواست ناموفق بود.",
     "unknown": "مشکلی پیش آمد.",
+    "required": "این مورد لازم است.",
     "requestId": "درخواست {id}.",
     "walletId": "شناسه کیف ۲۴ نویسه هگز است.",
     "walletIdPair": "هر دو شناسه کیف باید ۲۴ نویسه هگز باشند.",

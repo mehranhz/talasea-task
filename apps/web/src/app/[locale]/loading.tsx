@@ -1,11 +1,11 @@
-import { getTranslations } from "next-intl/server";
-import { Text } from "@/design-system";
+import { Skeleton } from "@/design-system";
 
-export default async function Loading() {
-  const t = await getTranslations("common");
+export default function Loading() {
   return (
-    <Text variant="muted" size="sm" role="status">
-      {t("loading")}
-    </Text>
+    <div className="flex flex-col gap-6" role="status">
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-24 w-full" />
+    </div>
   );
 }

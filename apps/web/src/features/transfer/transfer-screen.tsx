@@ -2,12 +2,13 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
-import { Button, Field, Heading, Input, Note, Select, Surface, Text } from "@/design-system";
-import { apiRequest, type TransferResult } from "@/lib/api";
+import { Button, Field, Heading, Input, Select, Surface, Text } from "@/design-system";
 import { useDescribeError } from "@/lib/errors";
 import { amountHint, formatMinor, newReferenceId, toMinorUnits, WALLET_ID } from "@/lib/money";
 import { useReferenceId } from "@/lib/reference";
 import { useSavedWallets } from "@/lib/wallets";
+import { ReplayedNote } from "@/features/wallet/wallet-screen";
+import { useTransfer } from "./use-transfer";
 
 export function TransferScreen() {
   const wallets = useSavedWallets();
@@ -17,14 +18,16 @@ export function TransferScreen() {
   const hints = useTranslations("hints");
   const errors = useTranslations("errors");
   const describeError = useDescribeError();
+  const transfer = useTransfer();
   const [fromWalletId, setFromWalletId] = useState("");
   const [toWalletId, setToWalletId] = useState("");
   const [amount, setAmount] = useState("");
   const [referenceId, setReferenceId] = useReferenceId();
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replayed, setReplayed] = useState(false);
-  const [result, setResult] = useState<TransferResult | null>(null);
+  const [result, setResult] = useState<{ fromBalance: string; toBalance: string; asset: string; transferId: string } | null>(
+    null,
+  );
 
   const from = wallets.find((wallet) => wallet.id === fromWalletId.trim());
   const hint = amountHint(amount);
@@ -37,6 +40,10 @@ export function TransferScreen() {
     setError(null);
     setReplayed(false);
     setResult(null);
+    if (!referenceId.trim()) {
+      setError(errors("required"));
+      return;
+    }
     if (!WALLET_ID.test(fromWalletId.trim()) || !WALLET_ID.test(toWalletId.trim())) {
       setError(errors("walletIdPair"));
       return;
@@ -48,16 +55,12 @@ export function TransferScreen() {
       setError(describeError(cause));
       return;
     }
-    setPending(true);
     try {
-      const response = await apiRequest<TransferResult>("/api/v1/wallets/transfer", {
-        method: "POST",
-        body: JSON.stringify({
-          fromWalletId: fromWalletId.trim(),
-          toWalletId: toWalletId.trim(),
-          amount: minor,
-          referenceId,
-        }),
+      const response = await transfer.mutateAsync({
+        fromWalletId: fromWalletId.trim(),
+        toWalletId: toWalletId.trim(),
+        amount: minor,
+        referenceId,
       });
       setResult(response.data);
       setReplayed(response.replayed);
@@ -65,8 +68,6 @@ export function TransferScreen() {
       setReferenceId(newReferenceId());
     } catch (cause) {
       setError(describeError(cause));
-    } finally {
-      setPending(false);
     }
   }
 
@@ -79,7 +80,7 @@ export function TransferScreen() {
         </Text>
       </div>
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
         {wallets.length > 0 ? (
           <Field label={t("savedSender")}>
             <Select
@@ -98,7 +99,6 @@ export function TransferScreen() {
         <Field label={t("from")}>
           <Input
             name="fromWalletId"
-            required
             spellCheck={false}
             autoComplete="off"
             value={fromWalletId}
@@ -108,19 +108,17 @@ export function TransferScreen() {
         <Field label={t("to")}>
           <Input
             name="toWalletId"
-            required
             spellCheck={false}
             autoComplete="off"
             value={toWalletId}
             onChange={(event) => setToWalletId(event.target.value)}
           />
         </Field>
-        <Field label={t("amount")} hint={hintText}>
+        <Field label={t("amount")} hint={hintText} error={error ?? undefined}>
           <Input
             name="amount"
             inputMode="decimal"
             autoComplete="off"
-            required
             placeholder={t("amountPlaceholder")}
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
@@ -129,7 +127,6 @@ export function TransferScreen() {
         <Field label={t("reference")}>
           <Input
             name="referenceId"
-            required
             minLength={1}
             maxLength={128}
             value={referenceId}
@@ -139,9 +136,8 @@ export function TransferScreen() {
         <Button type="button" variant="text" size="sm" onClick={() => setReferenceId(newReferenceId())}>
           {actions("newReference")}
         </Button>
-        {replayed ? <Note variant="replay">{t("replayed")}</Note> : null}
-        {error ? <Note variant="error">{error}</Note> : null}
-        <Button type="submit" fullWidth pending={pending} pendingLabel={actions("pending")}>
+        <ReplayedNote replayed={replayed} message={t("replayed")} />
+        <Button type="submit" fullWidth pending={transfer.isPending} pendingLabel={actions("pending")}>
           {actions("transfer")}
         </Button>
       </form>

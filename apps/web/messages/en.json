@@ -35,7 +35,8 @@
     "withdraw": "Withdraw",
     "transfer": "Transfer",
     "newReference": "New reference",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "retry": "Try again"
   },
   "wallets": {
     "title": "Wallets",
@@ -106,6 +107,7 @@
     "network": "The wallet API is unreachable.",
     "requestFailed": "Request failed.",
     "unknown": "Something went wrong.",
+    "required": "This field is required.",
     "requestId": "Request {id}.",
     "walletId": "A wallet id is 24 hex characters.",
     "walletIdPair": "Both wallet ids must be 24 hex characters.",

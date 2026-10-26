@@ -1,8 +1,14 @@
-import messages from "../../messages/fa.json";
+import { getLocale, getTranslations } from "next-intl/server";
+import { directionFor } from "@/i18n/routing";
 
-export default function NotFound() {
+export const instant = false;
+
+export default async function NotFound() {
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: "errors" });
+
   return (
-    <html lang="fa" dir="rtl">
+    <html lang={locale} dir={directionFor(locale)}>
       <body
         style={{
           margin: 0,
@@ -14,7 +20,7 @@ export default function NotFound() {
           fontFamily: "sans-serif",
         }}
       >
-        {messages.errors.notFound}
+        {t("notFound")}
       </body>
     </html>
   );
