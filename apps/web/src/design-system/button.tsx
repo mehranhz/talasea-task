@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn } from "./cn";
 
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-60",
+  "relative inline-flex items-center justify-center gap-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-60",
   {
     variants: {
       variant: {
@@ -69,7 +69,13 @@ export function Button({
       className={cn(buttonVariants({ variant, size, selected, fullWidth }), className)}
       {...props}
     >
-      {pending && pendingLabel ? pendingLabel : children}
+      <span className={pending ? "invisible" : undefined}>{children}</span>
+      {pending ? (
+        <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+          <span className="size-4 animate-spin rounded-full border-2 border-current border-e-transparent" />
+        </span>
+      ) : null}
+      {pending && pendingLabel ? <span className="sr-only">{pendingLabel}</span> : null}
     </button>
   );
 }
