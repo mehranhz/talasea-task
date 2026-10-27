@@ -1,31 +1,15 @@
 "use client";
 
-import {
-  ArrowDownLeft,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ArrowUpRight,
-  ChevronDown,
-  Inbox,
-  RefreshCw,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, Inbox } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { Button, Field, Glyph, Heading, Input, Note, Select, Skeleton, Surface, Text } from "@talasea/ui";
+import { Button, Field, Glyph, Heading, Input, Note, Select, Skeleton, Text } from "@talasea/ui";
+import { ReferenceDisclosure } from "@/features/reference-disclosure";
 import { usePathname } from "@/i18n/navigation";
-import type { LedgerRow } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
 import { amountHint, formatMinor } from "@/lib/money";
-import { useSavedWallets } from "@/lib/wallets";
+import { useSavedWallets, type SavedWallet } from "@/lib/wallets";
 import { useWalletDetail, type HistoryType } from "./use-wallet-detail";
-
-const ledgerIcons = {
-  DEPOSIT: ArrowDownToLine,
-  WITHDRAWAL: ArrowUpFromLine,
-  TRANSFER_IN: ArrowDownLeft,
-  TRANSFER_OUT: ArrowUpRight,
-} satisfies Record<LedgerRow["type"], LucideIcon>;
 
 const movementIcons = {
   deposit: ArrowDownToLine,
@@ -37,14 +21,30 @@ export function ReplayedNote({ replayed, message }: { replayed: boolean; message
   return <Note variant="replay">{message}</Note>;
 }
 
-export function WalletScreen() {
+export function WalletScreen({
+  initialWallets = [],
+  missingWalletIds = [],
+}: {
+  initialWallets?: SavedWallet[];
+  missingWalletIds?: readonly string[];
+}) {
   const params = useParams<{ id: string }>();
   const pathname = usePathname();
   const id = typeof params.id === "string" ? params.id : "";
-  return <WalletScreenView key={`${pathname}:${id}`} id={id} />;
+  return (
+    <WalletScreenView key={`${pathname}:${id}`} id={id} initialWallets={initialWallets} missingWalletIds={missingWalletIds} />
+  );
 }
 
-function WalletScreenView({ id }: { id: string }) {
+function WalletScreenView({
+  id,
+  initialWallets,
+  missingWalletIds,
+}: {
+  id: string;
+  initialWallets: SavedWallet[];
+  missingWalletIds: readonly string[];
+}) {
   const locale = useLocale();
   const format = useFormatter();
   const t = useTranslations("wallet");
@@ -52,7 +52,7 @@ function WalletScreenView({ id }: { id: string }) {
   const ledger = useTranslations("ledger");
   const hints = useTranslations("hints");
   const describeError = useDescribeError();
-  const saved = useSavedWallets();
+  const saved = useSavedWallets(initialWallets, missingWalletIds);
   const detail = useWalletDetail(id);
   const owner = saved.find((wallet) => wallet.id === id)?.userId ?? "";
 
@@ -62,7 +62,9 @@ function WalletScreenView({ id }: { id: string }) {
   const rows = detail.rows;
   const hint = amountHint(detail.amount);
   const hintText =
-    hint.kind === "minor" ? hints("minor", { value: hint.value }) : hint.kind === "empty" ? hints("empty") : hints("decimals");
+    hint.kind === "minor" ? hints("minor", { value: hint.value }) : hint.kind === "decimals" ? hints("decimals") : undefined;
+  const ownerLabel = owner || t("fallbackOwner");
+  const meta = balance?.asset ? `${ownerLabel} · ${balance.asset}` : ownerLabel;
 
   if (!detail.valid) {
     return (
@@ -74,29 +76,21 @@ function WalletScreenView({ id }: { id: string }) {
 
   return (
     <div className="stack">
-      <Surface variant="card" padding="md" className="balance-panel">
-        <Text variant="muted" size="sm">
-          {owner || t("fallbackOwner")}
-        </Text>
+      <header>
         {detail.balance.isPending ? (
-          <Skeleton className="mt-2 h-10 w-40" />
+          <Skeleton className="h-14 w-48" />
         ) : (
-          <Heading size="display" className="mt-1">
-            {balance ? formatMinor(balance.balance, balance.asset, locale) : "—"}
-          </Heading>
+          <Heading size="display">{balance ? formatMinor(balance.balance, balance.asset, locale) : "—"}</Heading>
         )}
         <Text variant="muted" size="sm" className="mt-2">
-          {balance?.asset ?? ""}
-        </Text>
-        <Text as="span" variant="muted" size="xs" className="mt-1 block truncate font-mono">
-          {id}
+          {meta}
         </Text>
         {loadError ? (
           <Note variant="error" className="mt-3">
             {loadError}
           </Note>
         ) : null}
-      </Surface>
+      </header>
 
       <form noValidate onSubmit={detail.onSubmit} className="stack-form">
         <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("movement")}>
@@ -117,19 +111,14 @@ function WalletScreenView({ id }: { id: string }) {
             onChange={(event) => detail.setAmount(event.target.value)}
           />
         </Field>
-        <Field label={t("reference")} hint={t("referenceHint")}>
-          <Input
-            name="referenceId"
-            minLength={1}
-            maxLength={128}
-            value={detail.referenceId}
-            onChange={(event) => detail.setReferenceId(event.target.value)}
-          />
-        </Field>
-        <Button type="button" variant="text" size="sm" onClick={() => detail.rotateReference()}>
-          <Glyph icon={RefreshCw} />
-          {actions("newReference")}
-        </Button>
+        <ReferenceDisclosure
+          label={t("reference")}
+          hint={t("referenceHint")}
+          value={detail.referenceId}
+          rotateLabel={actions("newReference")}
+          onChange={detail.setReferenceId}
+          onRotate={detail.rotateReference}
+        />
         <ReplayedNote replayed={detail.replayed} message={t("replayed")} />
         <Button type="submit" fullWidth pending={detail.movePending} pendingLabel={actions("pending")}>
           <Glyph icon={movementIcons[detail.mode]} />
@@ -144,7 +133,7 @@ function WalletScreenView({ id }: { id: string }) {
           </Heading>
           <label className="filter-field">
             <span className="sr-only">{t("filter")}</span>
-            <Select value={detail.filter} onChange={(event) => detail.setFilter(event.target.value as HistoryType)}>
+            <Select size="sm" value={detail.filter} onChange={(event) => detail.setFilter(event.target.value as HistoryType)}>
               <option value="">{ledger("all")}</option>
               <option value="DEPOSIT">{ledger("deposits")}</option>
               <option value="WITHDRAWAL">{ledger("withdrawals")}</option>
@@ -162,45 +151,28 @@ function WalletScreenView({ id }: { id: string }) {
             {t("emptyHistory")}
           </div>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {rows.map((row) => {
-              const directional = row.type === "TRANSFER_IN" || row.type === "TRANSFER_OUT";
-              return (
-                <li key={row.id}>
-                  <Surface variant="card" padding="sm">
-                    <div className="flex items-start gap-3">
-                      <span className="medallion medallion-sm" aria-hidden="true">
-                        <Glyph icon={ledgerIcons[row.type]} directional={directional} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <Text as="span" variant="label" size="sm">
-                            {ledger(row.type)}
-                          </Text>
-                          <Text
-                            as="span"
-                            variant={row.direction === "CREDIT" ? "positive" : "body"}
-                            size="sm"
-                            className="font-semibold tabular-nums"
-                          >
-                            {row.direction === "CREDIT" ? "+" : "−"}
-                            {formatMinor(row.amount, row.asset, locale).replace(/^[−-]/, "")}
-                          </Text>
-                        </div>
-                        <Text variant="muted" size="xs" className="mt-1">
-                          {t("balanceAfter", { amount: formatMinor(row.balanceAfter, row.asset, locale) })}
-                          {" · "}
-                          {format.dateTime(new Date(row.createdAt), { dateStyle: "medium", timeStyle: "short" })}
-                        </Text>
-                        <Text as="span" variant="muted" size="xs" className="mt-1 block truncate font-mono">
-                          {row.referenceId}
-                        </Text>
-                      </div>
-                    </div>
-                  </Surface>
-                </li>
-              );
-            })}
+          <ul className="list-rows">
+            {rows.map((row) => (
+              <li key={row.id} className="list-row">
+                <span className="min-w-0">
+                  <Text as="span" variant="label" size="sm" className="block">
+                    {ledger(row.type)}
+                  </Text>
+                  <Text variant="muted" size="xs" className="mt-1">
+                    {format.dateTime(new Date(row.createdAt), { dateStyle: "medium", timeStyle: "short" })}
+                  </Text>
+                </span>
+                <Text
+                  as="span"
+                  variant={row.direction === "CREDIT" ? "positive" : "body"}
+                  size="sm"
+                  className="shrink-0 font-semibold tabular-nums"
+                >
+                  {row.direction === "CREDIT" ? "+" : "−"}
+                  {formatMinor(row.amount, row.asset, locale).replace(/^[−-]/, "")}
+                </Text>
+              </li>
+            ))}
           </ul>
         )}
         {detail.history.hasNextPage ? (

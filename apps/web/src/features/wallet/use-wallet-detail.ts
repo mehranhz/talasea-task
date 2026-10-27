@@ -2,23 +2,18 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { usePathname } from "@/i18n/navigation";
-import { apiRequest, type Balance, type LedgerRow, type Movement } from "@/lib/api";
+import { apiRequest, isWalletMissing, type LedgerRow, type Movement } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
 import { newReferenceId, toMinorUnits, WALLET_ID } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
 import { useReferenceId } from "@/lib/reference";
+import { forgetWallet } from "@/lib/wallets";
+import { fetchBalance, fetchLedgerPage } from "@/lib/wallet-reads";
 
 export type HistoryType = "" | LedgerRow["type"];
 export type MovementMode = "deposit" | "withdraw";
-
-async function ledgerPage(id: string, filter: HistoryType, cursor: string | null) {
-  const query = new URLSearchParams({ limit: "20" });
-  if (cursor) query.set("cursor", cursor);
-  if (filter) query.set("type", filter);
-  return apiRequest<LedgerRow[]>(`/api/v1/wallets/${id}/transactions?${query.toString()}`);
-}
 
 export function useWalletDetail(id: string) {
   const pathname = usePathname();
@@ -48,13 +43,17 @@ export function useWalletDetail(id: string) {
   const balance = useQuery({
     queryKey: queryKeys.balance(id),
     enabled: valid,
-    queryFn: () => apiRequest<Balance>(`/api/v1/wallets/${id}/balance`),
+    queryFn: () => fetchBalance(id),
   });
+  useLayoutEffect(() => {
+    if (!valid || !balance.isError || !isWalletMissing(balance.error)) return;
+    forgetWallet(id);
+  }, [balance.error, balance.isError, id, valid]);
   const history = useInfiniteQuery({
     queryKey: queryKeys.ledger(id, routeChanged ? "" : filter),
     enabled: valid,
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => ledgerPage(id, routeChanged ? "" : filter, pageParam),
+    queryFn: ({ pageParam }) => fetchLedgerPage(id, routeChanged ? "" : filter, pageParam),
     getNextPageParam: (last) => last.meta.nextCursor ?? undefined,
   });
   const move = useMutation({

@@ -1,39 +1,50 @@
 "use client";
 
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { apiRequest, type Balance, type CreatedWallet } from "@/lib/api";
+import { apiRequest, isWalletMissing, type CreatedWallet } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
 import { formatMinor, WALLET_ID } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
-import { readWallets, rememberWallet, useSavedWallets } from "@/lib/wallets";
+import { forgetWallet, forgetWallets, readWallets, rememberWallet, useSavedWallets, type SavedWallet } from "@/lib/wallets";
+import { fetchBalance } from "@/lib/wallet-reads";
 
 const ASSETS = ["USD", "EUR"] as const;
 export type WalletAsset = (typeof ASSETS)[number];
 export { ASSETS };
 
-export function useWalletDirectory() {
+export type WalletBalanceRead =
+  | { status: "pending" }
+  | { status: "error"; message: string }
+  | { status: "ready"; text: string };
+
+export function useWalletDirectory(initialWallets: SavedWallet[] = [], missingWalletIds: readonly string[] = []) {
   const locale = useLocale();
-  const t = useTranslations("wallets");
   const errors = useTranslations("errors");
   const describeError = useDescribeError();
   const router = useRouter();
   const pathname = usePathname();
-  const wallets = useSavedWallets();
+  const saved = useSavedWallets(initialWallets, missingWalletIds);
   const queryClient = useQueryClient();
-  const health = useQuery({
-    queryKey: queryKeys.health,
-    retry: false,
-    queryFn: () => apiRequest<{ status: string }>("/health/live"),
-  });
   const balances = useQueries({
-    queries: wallets.map((wallet) => ({
+    queries: saved.map((wallet) => ({
       queryKey: queryKeys.balance(wallet.id),
-      queryFn: () => apiRequest<Balance>(`/api/v1/wallets/${wallet.id}/balance`),
+      queryFn: () => fetchBalance(wallet.id),
     })),
   });
+  const missingNow = saved.filter((wallet, index) => {
+    const query = balances[index];
+    return query?.isError === true && isWalletMissing(query.error);
+  });
+  const missingNowKey = missingNow.map((wallet) => wallet.id).join("\n");
+  const wallets = missingNowKey ? saved.filter((wallet) => !missingNowKey.split("\n").includes(wallet.id)) : saved;
+
+  useLayoutEffect(() => {
+    if (!missingNowKey) return;
+    forgetWallets(missingNowKey.split("\n"));
+  }, [missingNowKey]);
 
   const create = useMutation({
     mutationFn: (body: { userId: string; asset: string }) =>
@@ -61,7 +72,7 @@ export function useWalletDirectory() {
   });
 
   const open = useMutation({
-    mutationFn: (id: string) => apiRequest<Balance>(`/api/v1/wallets/${id}/balance`),
+    mutationFn: (id: string) => fetchBalance(id),
     onSuccess: (result, id) => {
       const existing = readWallets().find((wallet) => wallet.id === id);
       rememberWallet({
@@ -144,24 +155,24 @@ export function useWalletDirectory() {
       clearEntry();
       router.push(`/wallets/${id}`);
     } catch (error) {
+      if (isWalletMissing(error)) forgetWallet(id);
       setOpenError(describeError(error));
     }
   }
 
-  function balanceText(id: string): string | undefined {
-    const index = wallets.findIndex((wallet) => wallet.id === id);
+  function balanceFor(id: string): WalletBalanceRead {
+    const index = saved.findIndex((wallet) => wallet.id === id);
     const query = balances[index];
-    if (!query || query.isPending) return undefined;
-    if (query.isError || !query.data) return t("unavailable");
-    return formatMinor(query.data.data.balance, query.data.data.asset, locale);
+    if (!query || query.isPending) return { status: "pending" };
+    if (query.isError || !query.data) {
+      return { status: "error", message: query.isError ? describeError(query.error) : errors("unknown") };
+    }
+    return { status: "ready", text: formatMinor(query.data.data.balance, query.data.data.asset, locale) };
   }
-
-  const status = health.isPending ? "checking" : health.isError ? "offline" : "online";
 
   return {
     wallets,
-    status,
-    balanceText,
+    balanceFor,
     createPending: create.isPending,
     openPending: open.isPending,
     userId,

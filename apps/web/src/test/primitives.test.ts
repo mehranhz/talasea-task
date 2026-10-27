@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buttonVariants } from "@talasea/ui";
-import { ApiError } from "@/lib/api";
+import { ApiError, isWalletMissing } from "@/lib/api";
 import { describeError } from "@/lib/errors";
 import { AmountError, formatMinor, toMinorUnits } from "@/lib/money";
 
@@ -33,6 +33,16 @@ describe("describeError", () => {
       "requestFailed requestId:abc",
     );
     expect(describeError(new Error("nope"), translate)).toBe("unknown");
+  });
+});
+
+describe("isWalletMissing", () => {
+  it("matches only a 404 wallet-not-found balance response", () => {
+    expect(isWalletMissing(new ApiError(404, "WALLET_NOT_FOUND", "Wallet not found", {}, null))).toBe(true);
+    expect(isWalletMissing(new ApiError(404, "REQUEST_FAILED", "REQUEST_FAILED", {}, null))).toBe(false);
+    expect(isWalletMissing(new ApiError(500, "INTERNAL_ERROR", "Internal error", {}, null))).toBe(false);
+    expect(isWalletMissing(new ApiError(0, "NETWORK", "NETWORK", {}, null))).toBe(false);
+    expect(isWalletMissing(new Error("Wallet not found"))).toBe(false);
   });
 });
 

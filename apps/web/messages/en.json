@@ -44,20 +44,20 @@
     "retry": "Try again"
   },
   "wallets": {
-    "title": "Wallets",
-    "checking": "Checking the API…",
-    "online": "API is reachable.",
-    "offline": "API is unreachable.",
     "savedLabel": "Saved wallets",
     "empty": "No wallets on this device yet. Create one, or open an id you already have.",
     "openedById": "Opened by id",
     "unavailable": "Unavailable",
+    "addWallet": "Add wallet",
     "createTitle": "Create a wallet",
     "userId": "User id",
     "userIdHint": "One wallet for each user and asset.",
     "asset": "Asset",
     "openTitle": "Open by id",
-    "walletId": "Wallet id"
+    "walletId": "Wallet id",
+    "copyAddress": "Copy wallet address",
+    "copied": "Copied",
+    "copyFailed": "Could not copy."
   },
   "wallet": {
     "fallbackOwner": "Wallet",
@@ -70,7 +70,6 @@
     "history": "History",
     "filter": "Filter",
     "emptyHistory": "No ledger rows on this page.",
-    "balanceAfter": "Balance {amount}",
     "replayed": "This reference was already used. The original result is shown again.",
     "modes": {
       "deposit": "Deposit",
@@ -79,9 +78,8 @@
   },
   "transfer": {
     "title": "Transfer",
-    "intro": "Moves money once for a reference id. Both wallets update together.",
     "savedSender": "Choose a saved sender",
-    "typeId": "Type an id below",
+    "typeId": "Type an id",
     "from": "From wallet",
     "to": "To wallet",
     "amount": "Amount",
@@ -104,7 +102,6 @@
     "transfersOut": "Transfers out"
   },
   "hints": {
-    "empty": "Sent to the API as minor units.",
     "decimals": "USD and EUR use two decimal places.",
     "minor": "{value} minor units"
   },

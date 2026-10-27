@@ -1,4 +1,13 @@
-import type { ApiMeta, Balance, CreatedWallet, LedgerRow, Movement, TransferResult } from "@talasea/types";
+import {
+  ErrorCode,
+  HTTP_STATUS,
+  type ApiMeta,
+  type Balance,
+  type CreatedWallet,
+  type LedgerRow,
+  type Movement,
+  type TransferResult,
+} from "@talasea/types";
 
 export type { ApiMeta, Balance, CreatedWallet, LedgerRow, Movement, TransferResult };
 
@@ -20,7 +29,11 @@ export class ApiError extends Error {
 
 type Meta = ApiMeta;
 
-const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+function apiOrigin(): string {
+  const published = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+  if (typeof window === "undefined" && process.env.API_URL) return process.env.API_URL;
+  return published;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -37,7 +50,7 @@ export async function apiRequest<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${apiBase}${path}`, { ...init, headers });
+    response = await fetch(`${apiOrigin()}${path}`, { ...init, headers, cache: "no-store" });
   } catch {
     throw new ApiError(0, "NETWORK", "NETWORK", {}, null);
   }
@@ -65,6 +78,15 @@ export async function apiRequest<T>(
     },
     replayed: response.headers.get("Idempotency-Replayed") === "true",
   };
+}
+
+/** GET /wallets/:id/balance answers a missing wallet with 404 WALLET_NOT_FOUND. */
+export function isWalletMissing(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === HTTP_STATUS[ErrorCode.WalletNotFound] &&
+    error.code === ErrorCode.WalletNotFound
+  );
 }
 
 export function errorText(error: unknown): string {
