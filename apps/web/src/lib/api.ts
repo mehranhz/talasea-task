@@ -11,6 +11,16 @@ import {
 
 export type { ApiMeta, Balance, CreatedWallet, LedgerRow, Movement, TransferResult };
 
+export const WALLETS_API_PATH = "/api/v1/wallets";
+
+/** Codes produced in the browser when the API body has no usable error. */
+export const ClientErrorCode = {
+  Network: "NETWORK",
+  RequestFailed: "REQUEST_FAILED",
+} as const;
+
+export const REPLAYED_HEADER = "Idempotency-Replayed";
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -52,7 +62,7 @@ export async function apiRequest<T>(
   try {
     response = await fetch(`${apiOrigin()}${path}`, { ...init, headers, cache: "no-store" });
   } catch {
-    throw new ApiError(0, "NETWORK", "NETWORK", {}, null);
+    throw new ApiError(0, ClientErrorCode.Network, ClientErrorCode.Network, {}, null);
   }
 
   const body: unknown = await response.json().catch(() => null);
@@ -62,8 +72,8 @@ export async function apiRequest<T>(
     const error = isRecord(record.error) ? record.error : {};
     throw new ApiError(
       response.status,
-      typeof error.code === "string" ? error.code : "REQUEST_FAILED",
-      typeof error.message === "string" ? error.message : "REQUEST_FAILED",
+      typeof error.code === "string" ? error.code : ClientErrorCode.RequestFailed,
+      typeof error.message === "string" ? error.message : ClientErrorCode.RequestFailed,
       error.details ?? {},
       typeof meta.requestId === "string" ? meta.requestId : null,
     );
@@ -76,7 +86,7 @@ export async function apiRequest<T>(
       nextCursor: typeof meta.nextCursor === "string" || meta.nextCursor === null ? meta.nextCursor : undefined,
       limit: typeof meta.limit === "number" ? meta.limit : undefined,
     },
-    replayed: response.headers.get("Idempotency-Replayed") === "true",
+    replayed: response.headers.get(REPLAYED_HEADER) === "true",
   };
 }
 
@@ -87,13 +97,4 @@ export function isWalletMissing(error: unknown): boolean {
     error.status === HTTP_STATUS[ErrorCode.WalletNotFound] &&
     error.code === ErrorCode.WalletNotFound
   );
-}
-
-export function errorText(error: unknown): string {
-  if (error instanceof ApiError) {
-    const request = error.requestId ? ` Request ${error.requestId}.` : "";
-    return `${error.message}${request}`;
-  }
-  if (error instanceof Error) return error.message;
-  return "Something went wrong.";
 }

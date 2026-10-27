@@ -2,6 +2,16 @@ import { MINOR_AMOUNT_PATTERN, WALLET_ID_PATTERN } from "@talasea/types";
 
 const DECIMALS = 2;
 
+export const ASSETS = ["USD", "EUR"] as const;
+export type WalletAsset = (typeof ASSETS)[number];
+
+const ISO_CURRENCY = /^[A-Z]{3}$/;
+
+function currencyCode(asset: string): string {
+  if (ISO_CURRENCY.test(asset)) return asset;
+  return ASSETS[0];
+}
+
 export class AmountError extends Error {
   readonly code: "invalid" | "decimals" | "positive";
 
@@ -24,7 +34,7 @@ export function formatMinor(minor: string, asset: string, locale = "en"): string
   const whole = padded.slice(0, -DECIMALS).replace(/^0+(?=\d)/, "");
   const frac = padded.slice(-DECIMALS);
   const value = Number(`${negative ? "-" : ""}${whole}.${frac}`);
-  const currency = asset === "EUR" ? "EUR" : "USD";
+  const currency = currencyCode(asset);
   return new Intl.NumberFormat(localeTag[locale] ?? locale, {
     style: "currency",
     currency,
@@ -61,7 +71,7 @@ export function amountHint(amount: string): AmountHint {
     return amount.trim() ? { kind: "minor", value: toMinorUnits(amount) } : { kind: "empty" };
   } catch (error) {
     if (error instanceof AmountError && error.code === "decimals") return { kind: "decimals" };
-    return { kind: "decimals" };
+    return { kind: "empty" };
   }
 }
 

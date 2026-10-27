@@ -2,7 +2,7 @@
 
 import { ArrowLeftRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { Button, Field, Glyph, Heading, Input, Select, Surface, Text } from "@talasea/ui";
 import { ReferenceDisclosure } from "@/features/reference-disclosure";
 import { ReplayedNote } from "@/features/wallet/wallet-screen";
@@ -44,6 +44,22 @@ function TransferScreenView({ initialWallets }: { initialWallets: SavedWallet[] 
     transfer.setFrom(value);
   }
 
+  function changeSender(event: ChangeEvent<HTMLSelectElement>) {
+    onSender(event.target.value);
+  }
+
+  function changeFrom(event: ChangeEvent<HTMLInputElement>) {
+    transfer.setFrom(event.target.value);
+  }
+
+  function changeTo(event: ChangeEvent<HTMLInputElement>) {
+    transfer.setTo(event.target.value);
+  }
+
+  function changeAmount(event: ChangeEvent<HTMLInputElement>) {
+    transfer.setAmount(event.target.value);
+  }
+
   return (
     <div className="stack">
       <Heading size="lg">{t("title")}</Heading>
@@ -51,7 +67,7 @@ function TransferScreenView({ initialWallets }: { initialWallets: SavedWallet[] 
       <form noValidate onSubmit={transfer.onSubmit} className="stack-form">
         {wallets.length > 0 ? (
           <Field label={t("from")}>
-            <Select value={selectValue} onChange={(event) => onSender(event.target.value)}>
+            <Select value={selectValue} onChange={changeSender}>
               <option value="">{t("savedSender")}</option>
               <option value={TYPE_ID}>{t("typeId")}</option>
               {wallets.map((wallet) => (
@@ -69,7 +85,7 @@ function TransferScreenView({ initialWallets }: { initialWallets: SavedWallet[] 
               spellCheck={false}
               autoComplete="off"
               value={transfer.fromWalletId}
-              onChange={(event) => transfer.setFrom(event.target.value)}
+              onChange={changeFrom}
             />
           </Field>
         ) : null}
@@ -79,7 +95,7 @@ function TransferScreenView({ initialWallets }: { initialWallets: SavedWallet[] 
             spellCheck={false}
             autoComplete="off"
             value={transfer.toWalletId}
-            onChange={(event) => transfer.setTo(event.target.value)}
+            onChange={changeTo}
           />
         </Field>
         <Field label={t("amount")} hint={hintText} error={transfer.error ?? undefined}>
@@ -89,7 +105,7 @@ function TransferScreenView({ initialWallets }: { initialWallets: SavedWallet[] 
             autoComplete="off"
             placeholder={t("amountPlaceholder")}
             value={transfer.amount}
-            onChange={(event) => transfer.setAmount(event.target.value)}
+            onChange={changeAmount}
           />
         </Field>
         <ReferenceDisclosure

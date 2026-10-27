@@ -145,6 +145,23 @@ body {
   padding-inline: 0;
 }
 
+.copy-address {
+  position: relative;
+  z-index: 10;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  padding: 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.copy-address:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+
 .theme-icon-moon {
   display: none;
 }

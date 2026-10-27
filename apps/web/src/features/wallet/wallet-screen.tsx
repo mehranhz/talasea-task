@@ -3,13 +3,15 @@
 import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, Inbox } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
+import type { ChangeEvent } from "react";
+import { Direction, TransactionType } from "@talasea/types";
 import { Button, Field, Glyph, Heading, Input, Note, Select, Skeleton, Text } from "@talasea/ui";
 import { ReferenceDisclosure } from "@/features/reference-disclosure";
 import { usePathname } from "@/i18n/navigation";
 import { useDescribeError } from "@/lib/errors";
 import { amountHint, formatMinor } from "@/lib/money";
 import { useSavedWallets, type SavedWallet } from "@/lib/wallets";
-import { useWalletDetail, type HistoryType } from "./use-wallet-detail";
+import { useWalletDetail, type HistoryType, type MovementMode } from "./use-wallet-detail";
 
 const movementIcons = {
   deposit: ArrowDownToLine,
@@ -66,6 +68,18 @@ function WalletScreenView({
   const ownerLabel = owner || t("fallbackOwner");
   const meta = balance?.asset ? `${ownerLabel} · ${balance.asset}` : ownerLabel;
 
+  function chooseMode(mode: MovementMode) {
+    detail.setMode(mode);
+  }
+
+  function changeAmount(event: ChangeEvent<HTMLInputElement>) {
+    detail.setAmount(event.target.value);
+  }
+
+  function changeFilter(event: ChangeEvent<HTMLSelectElement>) {
+    detail.setFilter(event.target.value as HistoryType);
+  }
+
   if (!detail.valid) {
     return (
       <Text variant="body" size="sm" className="text-danger">
@@ -79,9 +93,9 @@ function WalletScreenView({
       <header>
         {detail.balance.isPending ? (
           <Skeleton className="h-14 w-48" />
-        ) : (
-          <Heading size="display">{balance ? formatMinor(balance.balance, balance.asset, locale) : "—"}</Heading>
-        )}
+        ) : balance ? (
+          <Heading size="display">{formatMinor(balance.balance, balance.asset, locale)}</Heading>
+        ) : null}
         <Text variant="muted" size="sm" className="mt-2">
           {meta}
         </Text>
@@ -95,7 +109,7 @@ function WalletScreenView({
       <form noValidate onSubmit={detail.onSubmit} className="stack-form">
         <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("movement")}>
           {(["deposit", "withdraw"] as const).map((item) => (
-            <Button key={item} type="button" variant="choice" selected={detail.mode === item} onClick={() => detail.setMode(item)}>
+            <Button key={item} type="button" variant="choice" selected={detail.mode === item} onClick={() => chooseMode(item)}>
               <Glyph icon={movementIcons[item]} />
               {t(`modes.${item}`)}
             </Button>
@@ -108,7 +122,7 @@ function WalletScreenView({
             autoComplete="off"
             placeholder={t("amountPlaceholder")}
             value={detail.amount}
-            onChange={(event) => detail.setAmount(event.target.value)}
+            onChange={changeAmount}
           />
         </Field>
         <ReferenceDisclosure
@@ -133,12 +147,12 @@ function WalletScreenView({
           </Heading>
           <label className="filter-field">
             <span className="sr-only">{t("filter")}</span>
-            <Select size="sm" value={detail.filter} onChange={(event) => detail.setFilter(event.target.value as HistoryType)}>
+            <Select size="sm" value={detail.filter} onChange={changeFilter}>
               <option value="">{ledger("all")}</option>
-              <option value="DEPOSIT">{ledger("deposits")}</option>
-              <option value="WITHDRAWAL">{ledger("withdrawals")}</option>
-              <option value="TRANSFER_IN">{ledger("transfersIn")}</option>
-              <option value="TRANSFER_OUT">{ledger("transfersOut")}</option>
+              <option value={TransactionType.Deposit}>{ledger("deposits")}</option>
+              <option value={TransactionType.Withdrawal}>{ledger("withdrawals")}</option>
+              <option value={TransactionType.TransferIn}>{ledger("transfersIn")}</option>
+              <option value={TransactionType.TransferOut}>{ledger("transfersOut")}</option>
             </Select>
           </label>
         </div>
@@ -152,27 +166,30 @@ function WalletScreenView({
           </div>
         ) : (
           <ul className="list-rows">
-            {rows.map((row) => (
-              <li key={row.id} className="list-row">
-                <span className="min-w-0">
-                  <Text as="span" variant="label" size="sm" className="block">
-                    {ledger(row.type)}
+            {rows.map((row) => {
+              const credit = row.direction === Direction.Credit;
+              return (
+                <li key={row.id} className="list-row">
+                  <span className="min-w-0">
+                    <Text as="span" variant="label" size="sm" className="block">
+                      {ledger(row.type)}
+                    </Text>
+                    <Text variant="muted" size="xs" className="mt-1">
+                      {format.dateTime(new Date(row.createdAt), { dateStyle: "medium", timeStyle: "short" })}
+                    </Text>
+                  </span>
+                  <Text
+                    as="span"
+                    variant={credit ? "positive" : "body"}
+                    size="sm"
+                    className="shrink-0 font-semibold tabular-nums"
+                  >
+                    {credit ? "+" : "−"}
+                    {formatMinor(row.amount.replace(/^-/, ""), row.asset, locale)}
                   </Text>
-                  <Text variant="muted" size="xs" className="mt-1">
-                    {format.dateTime(new Date(row.createdAt), { dateStyle: "medium", timeStyle: "short" })}
-                  </Text>
-                </span>
-                <Text
-                  as="span"
-                  variant={row.direction === "CREDIT" ? "positive" : "body"}
-                  size="sm"
-                  className="shrink-0 font-semibold tabular-nums"
-                >
-                  {row.direction === "CREDIT" ? "+" : "−"}
-                  {formatMinor(row.amount, row.asset, locale).replace(/^[−-]/, "")}
-                </Text>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
         {detail.history.hasNextPage ? (

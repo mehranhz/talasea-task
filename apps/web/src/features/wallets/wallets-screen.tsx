@@ -2,11 +2,13 @@
 
 import { Check, Copy, FolderOpen, Plus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type MouseEvent } from "react";
 import { Button, Field, Glyph, Heading, Input, Note, Select, Skeleton, Text } from "@talasea/ui";
 import { Link } from "@/i18n/navigation";
 import type { SavedWallet } from "@/lib/wallets";
 import { ASSETS, useWalletDirectory, type WalletAsset } from "./use-wallet-directory";
+
+const COPY_FEEDBACK_MS = 2000;
 
 async function copyWalletId(walletId: string): Promise<boolean> {
   try {
@@ -23,7 +25,7 @@ function CopyWalletAddress({ walletId }: { walletId: string }) {
 
   useEffect(() => {
     if (!feedback) return;
-    const timeout = window.setTimeout(() => setFeedback(null), 2000);
+    const timeout = window.setTimeout(() => setFeedback(null), COPY_FEEDBACK_MS);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
 
@@ -42,7 +44,7 @@ function CopyWalletAddress({ walletId }: { walletId: string }) {
         type="button"
         variant="text"
         size="sm"
-        className="relative z-10 size-9 shrink-0 p-0 text-muted hover:bg-accent-soft hover:text-ink hover:no-underline"
+        className="copy-address"
         aria-label={t("copyAddress")}
         onClick={onCopy}
       >
@@ -74,6 +76,27 @@ export function WalletsScreen({
   const [showOpen, setShowOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const hasWallets = directory.wallets.length > 0;
+
+  function openAdd() {
+    setShowAdd(true);
+  }
+
+  function openById() {
+    setShowOpen(true);
+  }
+
+  function changeUserId(event: ChangeEvent<HTMLInputElement>) {
+    directory.setUserId(event.target.value);
+  }
+
+  function changeAsset(event: ChangeEvent<HTMLSelectElement>) {
+    directory.setAsset(event.target.value as WalletAsset);
+  }
+
+  function changeOpenId(event: ChangeEvent<HTMLInputElement>) {
+    directory.setOpenId(event.target.value);
+  }
+
   const showCreate = !hasWallets || showAdd;
   const showOpenForm = hasWallets ? showAdd : showOpen;
 
@@ -125,7 +148,7 @@ export function WalletsScreen({
       </section>
 
       {hasWallets && !showAdd ? (
-        <Button type="button" variant="text" onClick={() => setShowAdd(true)}>
+        <Button type="button" variant="text" onClick={openAdd}>
           {t("addWallet")}
         </Button>
       ) : null}
@@ -141,14 +164,14 @@ export function WalletsScreen({
               autoComplete="username"
               maxLength={128}
               value={directory.userId}
-              onChange={(event) => directory.setUserId(event.target.value)}
+              onChange={changeUserId}
             />
           </Field>
           <Field label={t("asset")}>
             <Select
               name="asset"
               value={directory.asset}
-              onChange={(event) => directory.setAsset(event.target.value as WalletAsset)}
+              onChange={changeAsset}
             >
               {ASSETS.map((item) => (
                 <option key={item} value={item}>
@@ -165,7 +188,7 @@ export function WalletsScreen({
       ) : null}
 
       {!hasWallets && !showOpen ? (
-        <Button type="button" variant="text" onClick={() => setShowOpen(true)}>
+        <Button type="button" variant="text" onClick={openById}>
           {t("openTitle")}
         </Button>
       ) : null}
@@ -181,7 +204,7 @@ export function WalletsScreen({
               autoComplete="off"
               spellCheck={false}
               value={directory.openId}
-              onChange={(event) => directory.setOpenId(event.target.value)}
+              onChange={changeOpenId}
             />
           </Field>
           <Button type="submit" fullWidth pending={directory.openPending} pendingLabel={actions("pending")}>

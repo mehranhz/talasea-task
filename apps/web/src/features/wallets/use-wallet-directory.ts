@@ -4,16 +4,14 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { useLayoutEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
-import { apiRequest, isWalletMissing, type CreatedWallet } from "@/lib/api";
+import { apiRequest, isWalletMissing, WALLETS_API_PATH, type CreatedWallet } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
-import { formatMinor, WALLET_ID } from "@/lib/money";
+import { ASSETS, formatMinor, WALLET_ID, type WalletAsset } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
 import { forgetWallet, forgetWallets, readWallets, rememberWallet, useSavedWallets, type SavedWallet } from "@/lib/wallets";
 import { fetchBalance } from "@/lib/wallet-reads";
 
-const ASSETS = ["USD", "EUR"] as const;
-export type WalletAsset = (typeof ASSETS)[number];
-export { ASSETS };
+export { ASSETS, type WalletAsset };
 
 export type WalletBalanceRead =
   | { status: "pending" }
@@ -48,7 +46,7 @@ export function useWalletDirectory(initialWallets: SavedWallet[] = [], missingWa
 
   const create = useMutation({
     mutationFn: (body: { userId: string; asset: string }) =>
-      apiRequest<CreatedWallet>("/api/v1/wallets", {
+      apiRequest<CreatedWallet>(WALLETS_API_PATH, {
         method: "POST",
         body: JSON.stringify(body),
       }),

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 import { usePathname } from "@/i18n/navigation";
-import { apiRequest, type TransferResult } from "@/lib/api";
+import { apiRequest, WALLETS_API_PATH, type TransferResult } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
 import { newReferenceId, toMinorUnits, WALLET_ID } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
@@ -17,7 +17,7 @@ export function useTransfer() {
   const queryClient = useQueryClient();
   const transfer = useMutation({
     mutationFn: (body: { fromWalletId: string; toWalletId: string; amount: string; referenceId: string }) =>
-      apiRequest<TransferResult>("/api/v1/wallets/transfer", {
+      apiRequest<TransferResult>(`${WALLETS_API_PATH}/transfer`, {
         method: "POST",
         body: JSON.stringify(body),
       }),

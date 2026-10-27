@@ -28,9 +28,7 @@
     "en": "English"
   },
   "common": {
-    "loading": "Loading…",
-    "loadingValue": "…",
-    "notFound": "This page could not be found."
+    "loading": "Loading…"
   },
   "actions": {
     "pending": "Working…",
@@ -47,7 +45,6 @@
     "savedLabel": "Saved wallets",
     "empty": "No wallets on this device yet. Create one, or open an id you already have.",
     "openedById": "Opened by id",
-    "unavailable": "Unavailable",
     "addWallet": "Add wallet",
     "createTitle": "Create a wallet",
     "userId": "User id",

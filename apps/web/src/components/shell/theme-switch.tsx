@@ -38,6 +38,10 @@ export function ThemeSwitch() {
   const t = useTranslations("theme");
   const theme = useSyncExternalStore(subscribe, readTheme, () => "light" as const);
 
+  function toggleTheme() {
+    applyTheme(readTheme() === "dark" ? "light" : "dark");
+  }
+
   return (
     <Button
       type="button"
@@ -47,7 +51,7 @@ export function ThemeSwitch() {
       selected={theme === "dark"}
       aria-pressed={theme === "dark"}
       aria-label={t("label")}
-      onClick={() => applyTheme(readTheme() === "dark" ? "light" : "dark")}
+      onClick={toggleTheme}
     >
       <Glyph icon={Sun} className="theme-icon theme-icon-sun" />
       <Glyph icon={Moon} className="theme-icon theme-icon-moon" />

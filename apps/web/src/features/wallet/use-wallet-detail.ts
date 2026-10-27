@@ -4,7 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useTranslations } from "next-intl";
 import { useLayoutEffect, useState, type FormEvent } from "react";
 import { usePathname } from "@/i18n/navigation";
-import { apiRequest, isWalletMissing, type LedgerRow, type Movement } from "@/lib/api";
+import { apiRequest, isWalletMissing, WALLETS_API_PATH, type LedgerRow, type Movement } from "@/lib/api";
 import { useDescribeError } from "@/lib/errors";
 import { newReferenceId, toMinorUnits, WALLET_ID } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
@@ -58,7 +58,7 @@ export function useWalletDetail(id: string) {
   });
   const move = useMutation({
     mutationFn: (body: { mode: MovementMode; amount: string; referenceId: string }) =>
-      apiRequest<Movement>(`/api/v1/wallets/${id}/${body.mode}`, {
+      apiRequest<Movement>(`${WALLETS_API_PATH}/${id}/${body.mode}`, {
         method: "POST",
         body: JSON.stringify({ amount: body.amount, referenceId: body.referenceId }),
       }),

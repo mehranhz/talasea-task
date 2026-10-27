@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
+import type { ChangeEvent } from "react";
 import { Button, Field, Glyph, Input } from "@talasea/ui";
 
 export function ReferenceDisclosure({
@@ -18,6 +19,10 @@ export function ReferenceDisclosure({
   onChange: (value: string) => void;
   onRotate: () => void;
 }) {
+  function changeReference(event: ChangeEvent<HTMLInputElement>) {
+    onChange(event.target.value);
+  }
+
   return (
     <details className="disclosure">
       <summary>{label}</summary>
@@ -28,7 +33,7 @@ export function ReferenceDisclosure({
             minLength={1}
             maxLength={128}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={changeReference}
           />
         </Field>
         <Button type="button" variant="text" size="sm" onClick={onRotate}>

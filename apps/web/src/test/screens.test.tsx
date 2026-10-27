@@ -11,6 +11,7 @@ import { ReplayedNote, WalletScreen } from "@/features/wallet/wallet-screen";
 import { WalletsScreen } from "@/features/wallets/wallets-screen";
 import { createRequestQueryClient, prefetchBalances } from "@/lib/prefetch-wallets";
 import { queryKeys } from "@/lib/query-keys";
+import { WALLETS_KEY } from "@/lib/saved-wallets";
 import { fetchBalance, fetchLedgerPage } from "@/lib/wallet-reads";
 
 const navigation = vi.hoisted(() => ({
@@ -66,7 +67,7 @@ function errorResponse(status: number, code: string, message: string) {
 }
 
 function walletCookie(): string {
-  const prefix = "talasea.wallets=";
+  const prefix = `${WALLETS_KEY}=`;
   const entry = document.cookie.split("; ").find((part) => part.startsWith(prefix));
   if (!entry) return "";
   const value = entry.slice(prefix.length);
@@ -79,8 +80,8 @@ function walletCookie(): string {
 
 function rememberDevice(wallets: { id: string; userId: string; asset: string }[]) {
   const raw = JSON.stringify(wallets);
-  localStorage.setItem("talasea.wallets", raw);
-  document.cookie = `talasea.wallets=${encodeURIComponent(raw)}; Path=/`;
+  localStorage.setItem(WALLETS_KEY, raw);
+  document.cookie = `${WALLETS_KEY}=${encodeURIComponent(raw)}; Path=/`;
 }
 
 function revealReference() {
@@ -109,7 +110,7 @@ beforeEach(() => {
   navigation.push.mockClear();
   navigation.replace.mockClear();
   localStorage.clear();
-  document.cookie = "talasea.wallets=; Path=/; Max-Age=0";
+  document.cookie = `${WALLETS_KEY}=; Path=/; Max-Age=0`;
 });
 
 afterEach(() => {
@@ -203,7 +204,7 @@ describe("screens", () => {
       { id: walletA, userId: "ada", asset: "USD" },
       { id: walletB, userId: "grace", asset: "EUR" },
     ];
-    localStorage.setItem("talasea.wallets", JSON.stringify(saved));
+    localStorage.setItem(WALLETS_KEY, JSON.stringify(saved));
     render(wrap(<WalletsScreen initialWallets={saved} />));
     expect(screen.queryByText(walletA)).not.toBeInTheDocument();
     expect(screen.queryByText(walletB)).not.toBeInTheDocument();
@@ -230,7 +231,7 @@ describe("screens", () => {
   it("shows a translated error when copying a wallet id fails", async () => {
     const writeText = vi.fn().mockRejectedValue(new Error("denied"));
     mockClipboard(writeText);
-    localStorage.setItem("talasea.wallets", JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
+    localStorage.setItem(WALLETS_KEY, JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
     render(wrap(<WalletsScreen initialWallets={[{ id: walletA, userId: "ada", asset: "USD" }]} />));
     fireEvent.click(screen.getByRole("button", { name: "Copy wallet address" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not copy.");
@@ -240,7 +241,7 @@ describe("screens", () => {
 
   it("shows a translated error when the clipboard is unavailable", async () => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
-    localStorage.setItem("talasea.wallets", JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
+    localStorage.setItem(WALLETS_KEY, JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
     render(wrap(<WalletsScreen initialWallets={[{ id: walletA, userId: "ada", asset: "USD" }]} />));
     fireEvent.click(screen.getByRole("button", { name: "Copy wallet address" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not copy.");
@@ -379,7 +380,7 @@ describe("screens", () => {
   });
 
   it("keeps one sender control until an id is typed", () => {
-    localStorage.setItem("talasea.wallets", JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
+    localStorage.setItem(WALLETS_KEY, JSON.stringify([{ id: walletA, userId: "ada", asset: "USD" }]));
     render(wrap(<TransferScreen />));
     expect(screen.getByRole("combobox", { name: "From wallet" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "From wallet" })).not.toBeInTheDocument();
@@ -469,7 +470,7 @@ describe("screens", () => {
     expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy wallet address" })).toBeInTheDocument();
     const kept = [{ id: walletB, userId: "grace", asset: "EUR" }];
-    expect(localStorage.getItem("talasea.wallets")).toBe(JSON.stringify(kept));
+    expect(localStorage.getItem(WALLETS_KEY)).toBe(JSON.stringify(kept));
     expect(walletCookie()).toBe(JSON.stringify(kept));
     expect(walletCookie()).not.toContain(walletA);
   });
@@ -482,7 +483,7 @@ describe("screens", () => {
     expect(await screen.findByText(/No wallets on this device/)).toBeInTheDocument();
     expect(screen.queryByText("ada")).not.toBeInTheDocument();
     expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
-    expect(localStorage.getItem("talasea.wallets")).toBe("[]");
+    expect(localStorage.getItem(WALLETS_KEY)).toBe("[]");
     expect(walletCookie()).toBe("[]");
   });
 
@@ -495,7 +496,7 @@ describe("screens", () => {
     expect(screen.getByText("ada")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy wallet address" })).toBeInTheDocument();
     expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
-    expect(localStorage.getItem("talasea.wallets")).toBe(JSON.stringify(saved));
+    expect(localStorage.getItem(WALLETS_KEY)).toBe(JSON.stringify(saved));
     expect(walletCookie()).toContain(walletA);
   });
 
@@ -507,7 +508,7 @@ describe("screens", () => {
     expect(await screen.findByText(/Internal error/)).toBeInTheDocument();
     expect(screen.getByText("ada")).toBeInTheDocument();
     expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
-    expect(localStorage.getItem("talasea.wallets")).toBe(JSON.stringify(saved));
+    expect(localStorage.getItem(WALLETS_KEY)).toBe(JSON.stringify(saved));
     expect(walletCookie()).toContain(walletA);
   });
 
@@ -519,7 +520,7 @@ describe("screens", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open wallet" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Wallet not found");
     expect(navigation.push).not.toHaveBeenCalled();
-    expect(localStorage.getItem("talasea.wallets")).toBeNull();
+    expect(localStorage.getItem(WALLETS_KEY)).toBeNull();
     expect(walletCookie()).not.toContain(walletA);
   });
 
@@ -529,7 +530,7 @@ describe("screens", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(errorResponse(404, "WALLET_NOT_FOUND", "Wallet not found"))));
     navigation.pathname = `/wallets/${walletA}`;
     render(wrap(<WalletScreen initialWallets={saved} />));
-    await waitFor(() => expect(localStorage.getItem("talasea.wallets")).toBe("[]"));
+    await waitFor(() => expect(localStorage.getItem(WALLETS_KEY)).toBe("[]"));
     expect(walletCookie()).toBe("[]");
     expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
   });
@@ -541,7 +542,7 @@ describe("screens", () => {
     navigation.pathname = `/wallets/${walletA}`;
     render(wrap(<WalletScreen initialWallets={saved} />));
     expect(await screen.findAllByText("The wallet API is unreachable.")).not.toHaveLength(0);
-    expect(localStorage.getItem("talasea.wallets")).toBe(JSON.stringify(saved));
+    expect(localStorage.getItem(WALLETS_KEY)).toBe(JSON.stringify(saved));
     expect(walletCookie()).toContain(walletA);
   });
 
@@ -574,7 +575,7 @@ describe("screens", () => {
     expect(html).not.toContain("ada");
     expect(html).not.toContain("Unavailable");
     expect(html).toMatch(/25\.00/);
-    expect(localStorage.getItem("talasea.wallets")).toBe(JSON.stringify([saved[1]]));
+    expect(localStorage.getItem(WALLETS_KEY)).toBe(JSON.stringify([saved[1]]));
     expect(walletCookie()).toBe(JSON.stringify([saved[1]]));
     expect(walletCookie()).not.toContain(walletA);
   });
