@@ -1,8 +1,10 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@talasea/ui";
 
-export default async function Loading() {
-  const t = await getTranslations("common");
+export default function Loading() {
+  const t = useTranslations("common");
 
   return (
     <div className="flex flex-col gap-6" role="status">
