@@ -56,7 +56,7 @@ Redis is the fast path for the balance cache, rate limiting, and the idempotency
 
 **Reconciliation compares the balance with the hot net plus the rollup.** The reconciliation job, on `RECONCILIATION_CRON` (`0 * * * *` in `.env.example`), compares `wallet.balance` with `TransactionRepository.netByWallet` plus `archivedNetByWallet`. Drift is logged. The job leaves the wallet document as it is.
 
-**Docker Compose runs MongoDB, Redis, the API, and the worker.** `docker-compose.yml` is the four-process layout above. MongoDB 7 is published on port 27017. Redis 7 is published on port 6379, with AOF enabled. The API is published on port 3000. The worker has no host port. The API and the worker wait until MongoDB and Redis are healthy, then use `MONGO_URI=mongodb://mongo:27017/wallet?replicaSet=rs0` and `REDIS_URL=redis://redis:6379`.
+**Docker Compose runs MongoDB, Redis, the API, the worker, and the web app.** `docker-compose.yml` at the repo root is that layout. MongoDB 7 is published on port 27017. Redis 7 is published on port 6379, with AOF enabled. The API is published on port 3000. The web app is published on port 3001. The worker has no host port. The API and the worker wait until MongoDB and Redis are healthy, then use `MONGO_URI=mongodb://mongo:27017/wallet?replicaSet=rs0` and `REDIS_URL=redis://redis:6379`. The browser calls the API at `http://localhost:3000`.
 
 **Errors share one envelope.** `errorHandler` in `src/common/http/errorHandler.ts` writes every failure as `{ error: { code, message, details }, meta: { requestId } }`. An `AppError` already carries the code, the status, the message, and `details`, so those four cases stay stable. Validation is `VALIDATION_ERROR` (400); a Zod failure lists `{ path, message }` under `details.issues`. An insufficient balance is `INSUFFICIENT_FUNDS` (422, `walletId`). A transfer to the same wallet is `SAME_WALLET_TRANSFER` (422, `walletId`). A second wallet for the same user and asset is `WALLET_EXISTS` (409, `userId` and `asset`), including when the unique index raises a duplicate key. A client tells those rejections apart from `code` and status.
 
@@ -74,25 +74,49 @@ With those four left out, the brief is still covered. One wallet per user per as
 
 ## How to run
 
-Node 20 or newer. Copy `.env.example` to `.env`. Compose loads that file and overrides `MONGO_URI` and `REDIS_URL` for the `api` and `worker` services so they use the Docker hostnames.
+This repo is a pnpm workspace run by Turborepo.
 
-Redis is published on **6379**. MongoDB is published on **27017**. The API is published on **3000**.
+- `apps/api` is the wallet service. Paths in the sections above (`src/server.ts`, `.env.example`) are inside that package. `docker-compose.yml` is at the repo root.
+- `apps/web` is the mobile-first Next.js PWA.
+
+Node 20 or newer. From the repo root:
+
+```bash
+pnpm install
+```
+
+Copy `apps/api/.env.example` to `apps/api/.env`. Compose loads that file and overrides `MONGO_URI` and `REDIS_URL` for the `api` and `worker` services so they use the Docker hostnames.
+
+Redis is published on **6379**. MongoDB is published on **27017**. The API is published on **3000**. The web app uses **3001**.
 
 ```bash
 docker compose up --build
 ```
 
-The `api` service runs `node dist/server.js`. The `worker` service runs `node dist/worker.js`.
+The `api` service runs `node dist/server.js`. The `worker` service runs `node dist/worker.js`. The `web` service serves the Next.js app on port 3001. Both image build contexts are the repo root, because the Dockerfiles install the pnpm workspace.
 
-To run the same processes on the host, point `.env` at the published ports: `MONGO_URI=mongodb://127.0.0.1:27017/wallet?replicaSet=rs0` and `REDIS_URL=redis://127.0.0.1:6379`. `connectMongo` in `src/config/mongo.ts` sets `directConnection` when that URI is localhost, which a one-member set on the host needs. Then:
+To run the same processes on the host, point `apps/api/.env` at the published ports: `MONGO_URI=mongodb://127.0.0.1:27017/wallet?replicaSet=rs0` and `REDIS_URL=redis://127.0.0.1:6379`. `connectMongo` in `src/config/mongo.ts` sets `directConnection` when that URI is localhost, which a one-member set on the host needs. `src/server.ts` and `src/worker.ts` load `apps/api/.env` when a variable is not already set. Then, from the repo root:
 
 ```bash
-npm run dev
-npm run dev:worker
+pnpm dev
+pnpm dev:worker
 ```
 
-`npm run build` compiles to `dist/`. `npm run start` and `npm run start:worker` run those files. `npm run typecheck` is `tsc --noEmit`.
+`pnpm dev` starts the API and the web app together. `pnpm --filter api build` compiles the API to `apps/api/dist/`. `pnpm --filter api start` and `pnpm --filter api start:worker` run those files. `pnpm --filter api typecheck` is `tsc --noEmit`.
 
-`npm run demo` runs `scripts/concurrency-demo.ts`. `npm run check:ledger` runs `scripts/ledger-check.ts`. `npm run test:e2e` runs `test/e2e/**/*.test.ts` with `--test-concurrency=1`.
+`pnpm --filter api demo` runs `scripts/concurrency-demo.ts`. `pnpm --filter api check:ledger` runs `scripts/ledger-check.ts`. `pnpm --filter api test:e2e` runs `test/e2e/**/*.test.ts` with `--test-concurrency=1`.
 
-`tutorial/README.md` is the longer walkthrough of the same service.
+### Web app
+
+`apps/web` is a TypeScript Next.js app styled with Tailwind. It is laid out for a phone first: a bottom navigation bar, large tap targets, and a single column that stays narrow on a desktop. There is no login. The API does not list wallets, so the app keeps wallet ids the user creates or opens in local storage on this device.
+
+Copy `apps/web/.env.example` to `apps/web/.env.local` if the API is not on `http://localhost:3000`. Amounts on screen are major units for USD and EUR (two decimal places). The client converts them to the integer minor-unit strings the API stores. Each deposit, withdrawal, and transfer sends a `referenceId`. Reusing that id replays the original result, and the screen says so when the response carries `Idempotency-Replayed`.
+
+The API allows browser calls from `CORS_ORIGINS` (default `http://localhost:3001` and `http://127.0.0.1:3001`). Add another origin there if you open the app from a different host.
+
+The PWA manifest is served from `/manifest.webmanifest`, with 192 and 512 icons. The service worker is `public/sw.js`. It is registered only in a production build, so `pnpm dev` stays easy to refresh. To install the app, build and start the web package, open `http://localhost:3001` in Chrome, and use Install app:
+
+```bash
+pnpm --filter web build
+pnpm --filter web start
+```

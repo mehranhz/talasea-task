@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button, Note } from "@/design-system";
+import { Button, Note } from "@talasea/ui";
 
 export default function LocaleError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const t = useTranslations("errors");

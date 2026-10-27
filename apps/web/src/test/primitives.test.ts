@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buttonVariants } from "@/design-system/button";
+import { buttonVariants } from "@talasea/ui";
 import { ApiError } from "@/lib/api";
 import { describeError } from "@/lib/errors";
 import { AmountError, formatMinor, toMinorUnits } from "@/lib/money";
@@ -40,6 +40,6 @@ describe("buttonVariants", () => {
   it("keeps a 44px touch target on md and lg", () => {
     expect(buttonVariants({ size: "md" })).toContain("h-11");
     expect(buttonVariants({ size: "lg" })).toContain("h-12");
-    expect(buttonVariants({ variant: "primary" })).toContain("bg-gold");
+    expect(buttonVariants({ variant: "primary" })).toContain("btn-primary");
   });
 });

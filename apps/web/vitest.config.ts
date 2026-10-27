@@ -8,6 +8,11 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    server: {
+      deps: {
+        inline: ["@talasea/ui"],
+      },
+    },
   },
   resolve: {
     alias: {

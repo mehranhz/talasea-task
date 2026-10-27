@@ -1,4 +1,4 @@
-import { Skeleton } from "@/design-system";
+import { Skeleton } from "@talasea/ui";
 
 export default function Loading() {
   return (

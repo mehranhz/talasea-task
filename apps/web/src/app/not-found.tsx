@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { directionFor } from "@/i18n/routing";
+import "./globals.css";
 
 export const instant = false;
 
@@ -9,17 +10,7 @@ export default async function NotFound() {
 
   return (
     <html lang={locale} dir={directionFor(locale)}>
-      <body
-        style={{
-          margin: 0,
-          minHeight: "100dvh",
-          display: "grid",
-          placeItems: "center",
-          background: "#f7f3ea",
-          color: "#241c14",
-          fontFamily: "sans-serif",
-        }}
-      >
+      <body className="m-0 grid min-h-dvh place-items-center bg-paper font-sans text-ink">
         {t("notFound")}
       </body>
     </html>

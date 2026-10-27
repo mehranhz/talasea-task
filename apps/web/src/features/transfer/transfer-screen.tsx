@@ -1,78 +1,34 @@
 "use client";
 
+import { ArrowLeftRight, RefreshCw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
-import { Button, Field, Heading, Input, Select, Surface, Text } from "@/design-system";
-import { useDescribeError } from "@/lib/errors";
-import { amountHint, formatMinor, newReferenceId, toMinorUnits, WALLET_ID } from "@/lib/money";
-import { useReferenceId } from "@/lib/reference";
-import { useSavedWallets } from "@/lib/wallets";
+import { Button, Field, Glyph, Heading, Input, Select, Surface, Text } from "@talasea/ui";
 import { ReplayedNote } from "@/features/wallet/wallet-screen";
+import { usePathname } from "@/i18n/navigation";
+import { amountHint, formatMinor } from "@/lib/money";
+import { useSavedWallets } from "@/lib/wallets";
 import { useTransfer } from "./use-transfer";
 
 export function TransferScreen() {
+  const pathname = usePathname();
+  return <TransferScreenView key={pathname} />;
+}
+
+function TransferScreenView() {
   const wallets = useSavedWallets();
   const locale = useLocale();
   const t = useTranslations("transfer");
   const actions = useTranslations("actions");
   const hints = useTranslations("hints");
-  const errors = useTranslations("errors");
-  const describeError = useDescribeError();
   const transfer = useTransfer();
-  const [fromWalletId, setFromWalletId] = useState("");
-  const [toWalletId, setToWalletId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [referenceId, setReferenceId] = useReferenceId();
-  const [error, setError] = useState<string | null>(null);
-  const [replayed, setReplayed] = useState(false);
-  const [result, setResult] = useState<{ fromBalance: string; toBalance: string; asset: string; transferId: string } | null>(
-    null,
-  );
-
-  const from = wallets.find((wallet) => wallet.id === fromWalletId.trim());
-  const hint = amountHint(amount);
+  const from = wallets.find((wallet) => wallet.id === transfer.fromWalletId.trim());
+  const hint = amountHint(transfer.amount);
   const amountHintText =
     hint.kind === "minor" ? hints("minor", { value: hint.value }) : hint.kind === "empty" ? hints("empty") : hints("decimals");
   const hintText = from ? `${amountHintText} · ${from.asset}` : amountHintText;
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setReplayed(false);
-    setResult(null);
-    if (!referenceId.trim()) {
-      setError(errors("required"));
-      return;
-    }
-    if (!WALLET_ID.test(fromWalletId.trim()) || !WALLET_ID.test(toWalletId.trim())) {
-      setError(errors("walletIdPair"));
-      return;
-    }
-    let minor: string;
-    try {
-      minor = toMinorUnits(amount);
-    } catch (cause) {
-      setError(describeError(cause));
-      return;
-    }
-    try {
-      const response = await transfer.mutateAsync({
-        fromWalletId: fromWalletId.trim(),
-        toWalletId: toWalletId.trim(),
-        amount: minor,
-        referenceId,
-      });
-      setResult(response.data);
-      setReplayed(response.replayed);
-      setAmount("");
-      setReferenceId(newReferenceId());
-    } catch (cause) {
-      setError(describeError(cause));
-    }
-  }
-
   return (
-    <div className="flex flex-col gap-8">
+    <div className="stack">
       <div>
         <Heading size="lg">{t("title")}</Heading>
         <Text variant="muted" size="sm" className="mt-1">
@@ -80,12 +36,12 @@ export function TransferScreen() {
         </Text>
       </div>
 
-      <form noValidate onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form noValidate onSubmit={transfer.onSubmit} className="stack-form">
         {wallets.length > 0 ? (
           <Field label={t("savedSender")}>
             <Select
-              value={wallets.some((wallet) => wallet.id === fromWalletId) ? fromWalletId : ""}
-              onChange={(event) => setFromWalletId(event.target.value)}
+              value={wallets.some((wallet) => wallet.id === transfer.fromWalletId) ? transfer.fromWalletId : ""}
+              onChange={(event) => transfer.setFrom(event.target.value)}
             >
               <option value="">{t("typeId")}</option>
               {wallets.map((wallet) => (
@@ -101,8 +57,8 @@ export function TransferScreen() {
             name="fromWalletId"
             spellCheck={false}
             autoComplete="off"
-            value={fromWalletId}
-            onChange={(event) => setFromWalletId(event.target.value)}
+            value={transfer.fromWalletId}
+            onChange={(event) => transfer.setFrom(event.target.value)}
           />
         </Field>
         <Field label={t("to")}>
@@ -110,18 +66,18 @@ export function TransferScreen() {
             name="toWalletId"
             spellCheck={false}
             autoComplete="off"
-            value={toWalletId}
-            onChange={(event) => setToWalletId(event.target.value)}
+            value={transfer.toWalletId}
+            onChange={(event) => transfer.setTo(event.target.value)}
           />
         </Field>
-        <Field label={t("amount")} hint={hintText} error={error ?? undefined}>
+        <Field label={t("amount")} hint={hintText} error={transfer.error ?? undefined}>
           <Input
             name="amount"
             inputMode="decimal"
             autoComplete="off"
             placeholder={t("amountPlaceholder")}
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            value={transfer.amount}
+            onChange={(event) => transfer.setAmount(event.target.value)}
           />
         </Field>
         <Field label={t("reference")}>
@@ -129,32 +85,34 @@ export function TransferScreen() {
             name="referenceId"
             minLength={1}
             maxLength={128}
-            value={referenceId}
-            onChange={(event) => setReferenceId(event.target.value)}
+            value={transfer.referenceId}
+            onChange={(event) => transfer.setReferenceId(event.target.value)}
           />
         </Field>
-        <Button type="button" variant="text" size="sm" onClick={() => setReferenceId(newReferenceId())}>
+        <Button type="button" variant="text" size="sm" onClick={() => transfer.rotateReference()}>
+          <Glyph icon={RefreshCw} />
           {actions("newReference")}
         </Button>
-        <ReplayedNote replayed={replayed} message={t("replayed")} />
+        <ReplayedNote replayed={transfer.replayed} message={t("replayed")} />
         <Button type="submit" fullWidth pending={transfer.isPending} pendingLabel={actions("pending")}>
+          <Glyph icon={ArrowLeftRight} />
           {actions("transfer")}
         </Button>
       </form>
 
-      {result ? (
+      {transfer.result ? (
         <Surface variant="card" padding="md">
           <Heading level={2} size="sm">
             {t("result")}
           </Heading>
           <Text variant="muted" size="sm" className="mt-2">
-            {t("senderBalance", { amount: formatMinor(result.fromBalance, result.asset, locale) })}
+            {t("senderBalance", { amount: formatMinor(transfer.result.fromBalance, transfer.result.asset, locale) })}
           </Text>
           <Text variant="muted" size="sm">
-            {t("receiverBalance", { amount: formatMinor(result.toBalance, result.asset, locale) })}
+            {t("receiverBalance", { amount: formatMinor(transfer.result.toBalance, transfer.result.asset, locale) })}
           </Text>
           <Text as="span" variant="muted" size="xs" className="mt-2 block truncate font-mono">
-            {result.transferId}
+            {transfer.result.transferId}
           </Text>
         </Surface>
       ) : null}

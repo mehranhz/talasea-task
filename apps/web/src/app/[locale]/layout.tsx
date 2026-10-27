@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { QueryProvider } from "@/components/query-provider";
 import { AppShell } from "@/components/shell/app-shell";
 import { ServiceWorkerRegister } from "@/components/shell/service-worker-register";
+import { themeInitScript } from "@/components/shell/theme-script";
 import { routing, directionFor } from "@/i18n/routing";
 import "../globals.css";
 
@@ -24,7 +25,10 @@ async function requestNow() {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#241c14",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f4f2ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#101114" },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -77,8 +81,9 @@ export default async function LocaleLayout({
   const now = await requestNow();
 
   return (
-    <html lang={locale} dir={directionFor(locale)} className={sans.variable}>
+    <html lang={locale} dir={directionFor(locale)} className={sans.variable} suppressHydrationWarning>
       <body className="min-h-dvh font-sans antialiased">
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone} now={now} formats={{}}>
           <QueryProvider>
             <ServiceWorkerRegister />

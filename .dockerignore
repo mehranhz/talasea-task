@@ -1,5 +1,13 @@
 node_modules
+**/node_modules
 dist
+**/dist
 .git
 .env
+**/.env
+**/.env.local
 *.log
+**/.next
+**/.turbo
+task-mehran-hosseinzadeh
+task-mehran-hosseinzadeh.zip

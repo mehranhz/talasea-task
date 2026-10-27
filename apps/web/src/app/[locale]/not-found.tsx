@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Heading } from "@/design-system";
+import { Heading } from "@talasea/ui";
 
 export default async function LocaleNotFound() {
   const t = await getTranslations("errors");

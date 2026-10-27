@@ -1,3 +1,5 @@
+import { MINOR_AMOUNT_PATTERN, WALLET_ID_PATTERN } from "@talasea/types";
+
 const DECIMALS = 2;
 
 export class AmountError extends Error {
@@ -43,7 +45,7 @@ export function toMinorUnits(input: string): string {
   const whole = wholeRaw ?? "0";
   const frac = fracRaw.padEnd(DECIMALS, "0");
   const combined = `${whole}${frac}`.replace(/^0+(?=\d)/, "");
-  if (!/^[1-9][0-9]{0,12}$/.test(combined)) {
+  if (!MINOR_AMOUNT_PATTERN.test(combined)) {
     throw new AmountError("positive");
   }
   return combined;
@@ -67,4 +69,4 @@ export function newReferenceId(): string {
   return crypto.randomUUID();
 }
 
-export const WALLET_ID = /^[a-fA-F0-9]{24}$/;
+export const WALLET_ID = WALLET_ID_PATTERN;

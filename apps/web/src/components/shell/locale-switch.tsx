@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "@/design-system/button";
+import { Button } from "@talasea/ui";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
@@ -13,13 +13,13 @@ export function LocaleSwitch() {
   const shell = useTranslations("shell");
 
   return (
-    <div role="group" aria-label={shell("localeLabel")} className="flex gap-1">
+    <div role="group" aria-label={shell("localeLabel")} className="tool-group">
       {routing.locales.map((item) => (
         <Button
           key={item}
           type="button"
           variant="choice"
-          size="sm"
+          size="md"
           selected={item === locale}
           onClick={() => router.replace(pathname, { locale: item })}
         >

@@ -1,9 +1,12 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
+import { useState, type FormEvent } from "react";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { apiRequest, type Balance, type CreatedWallet } from "@/lib/api";
-import { formatMinor } from "@/lib/money";
+import { useDescribeError } from "@/lib/errors";
+import { formatMinor, WALLET_ID } from "@/lib/money";
 import { queryKeys } from "@/lib/query-keys";
 import { readWallets, rememberWallet, useSavedWallets } from "@/lib/wallets";
 
@@ -14,6 +17,10 @@ export { ASSETS };
 export function useWalletDirectory() {
   const locale = useLocale();
   const t = useTranslations("wallets");
+  const errors = useTranslations("errors");
+  const describeError = useDescribeError();
+  const router = useRouter();
+  const pathname = usePathname();
   const wallets = useSavedWallets();
   const queryClient = useQueryClient();
   const health = useQuery({
@@ -66,6 +73,81 @@ export function useWalletDirectory() {
     },
   });
 
+  const [userId, setUserIdState] = useState("");
+  const [asset, setAssetState] = useState<WalletAsset>("USD");
+  const [openId, setOpenIdState] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const [seenPath, setSeenPath] = useState(pathname);
+  const [homeReset, setHomeReset] = useState(false);
+
+  function clearEntry() {
+    setHomeReset(false);
+    setUserIdState("");
+    setAssetState("USD");
+    setOpenIdState("");
+    setCreateError(null);
+    setOpenError(null);
+  }
+
+  const entryPending = create.isPending || open.isPending;
+  const pathChanged = seenPath !== pathname;
+  const showHomeAgain = pathChanged && pathname === "/";
+  if (pathChanged) setSeenPath(pathname);
+  if ((showHomeAgain || homeReset) && pathname === "/" && !entryPending) {
+    clearEntry();
+  } else if (showHomeAgain && entryPending) {
+    setHomeReset(true);
+  }
+
+  function setUserId(value: string) {
+    setUserIdState(value);
+    setHomeReset(false);
+  }
+
+  function setAsset(value: WalletAsset) {
+    setAssetState(value);
+    setHomeReset(false);
+  }
+
+  function setOpenId(value: string) {
+    setOpenIdState(value);
+    setHomeReset(false);
+  }
+
+  async function onCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreateError(null);
+    if (!userId.trim()) {
+      setCreateError(errors("required"));
+      return;
+    }
+    try {
+      const result = await create.mutateAsync({ userId: userId.trim(), asset });
+      clearEntry();
+      router.push(`/wallets/${result.data.id}`);
+    } catch (error) {
+      setCreateError(describeError(error));
+    }
+  }
+
+  async function onOpen(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setOpenError(null);
+    const id = openId.trim();
+    if (!WALLET_ID.test(id)) {
+      setOpenError(errors("walletId"));
+      return;
+    }
+    try {
+      await open.mutateAsync(id);
+      clearEntry();
+      router.push(`/wallets/${id}`);
+    } catch (error) {
+      setOpenError(describeError(error));
+    }
+  }
+
   function balanceText(id: string): string | undefined {
     const index = wallets.findIndex((wallet) => wallet.id === id);
     const query = balances[index];
@@ -76,5 +158,21 @@ export function useWalletDirectory() {
 
   const status = health.isPending ? "checking" : health.isError ? "offline" : "online";
 
-  return { wallets, status, balanceText, create, open };
+  return {
+    wallets,
+    status,
+    balanceText,
+    createPending: create.isPending,
+    openPending: open.isPending,
+    userId,
+    asset,
+    openId,
+    createError,
+    openError,
+    setUserId,
+    setAsset,
+    setOpenId,
+    onCreate,
+    onOpen,
+  };
 }

@@ -8,5 +8,5 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  return <WalletsScreen />;
+  return <WalletsScreen key={locale} />;
 }

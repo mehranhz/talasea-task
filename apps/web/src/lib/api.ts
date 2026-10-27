@@ -1,3 +1,7 @@
+import type { ApiMeta, Balance, CreatedWallet, LedgerRow, Movement, TransferResult } from "@talasea/types";
+
+export type { ApiMeta, Balance, CreatedWallet, LedgerRow, Movement, TransferResult };
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -14,65 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-export type CreatedWallet = {
-  id: string;
-  userId: string;
-  asset: string;
-  balance: string;
-  version: number;
-  createdAt: string;
-};
-
-export type Balance = {
-  walletId: string;
-  asset: string;
-  balance: string;
-  version: number;
-};
-
-export type Movement = {
-  walletId: string;
-  asset: string;
-  amount: string;
-  balance: string;
-  referenceId: string;
-  transactionId: string;
-  type: string;
-};
-
-export type TransferResult = {
-  transferId: string;
-  referenceId: string;
-  asset: string;
-  amount: string;
-  fromWalletId: string;
-  toWalletId: string;
-  fromBalance: string;
-  toBalance: string;
-  fromTransactionId: string;
-  toTransactionId: string;
-};
-
-export type LedgerRow = {
-  id: string;
-  walletId: string;
-  userId: string;
-  asset: string;
-  type: "DEPOSIT" | "WITHDRAWAL" | "TRANSFER_OUT" | "TRANSFER_IN";
-  direction: "CREDIT" | "DEBIT";
-  amount: string;
-  balanceAfter: string;
-  referenceId: string;
-  counterpartyWalletId: string | null;
-  transferId: string | null;
-  createdAt: string;
-};
-
-type Meta = {
-  requestId?: string;
-  nextCursor?: string | null;
-  limit?: number;
-};
+type Meta = ApiMeta;
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
